@@ -51,7 +51,23 @@ class Deep_Neural_Network:
         assert (Z.shape == (W.shape[0], A.shape[1]))
         return Z
 
-    def
+    def ReLU(self, z):
+        return z * (z > 0)
+
+    def LRelU(self, z):
+        """
+        Leaky Rectified Linear Unit function
+        :param z: -- linear function value(corresponds to WA + b)
+        :return:
+        """
+        return z * (z > np.dot(0.001, z))
+
+    def tanh(self, z):
+        return np.tanh(z)
+
+    def sigmoid(self, z):
+        return 1.0 / (1.0 + np.exp(-z))
+
 
 def main():
     n_layer_nn = Deep_Neural_Network([5, 4, 3])
