@@ -12,11 +12,17 @@ class Actvitaion_Function(Enum):
 class Deep_Neural_Network:
 
     def __init__(self, layers_dims=None, factor=0.01, true_labels=None):
+        """
+        Initialize the N-Layer Neural Net structure
+        :param layers_dims: -- layers dimensions, where layers_dims[0] is a feature vector
+        :param factor: -- small-scale factor value to reduce initial weights and biases values
+        :param true_labels: -- labeled with correct answers data-set for a supervised learning training
+        """
         # number of layers in the network
         self._parameters = {}
         self._activation_cache = {}
         L = len(layers_dims)
-        self._depth = L
+        self._depth = L - 1
         if layers_dims is not None:
             for l in range(1, L):
                 # initialize weights with random values for each hidden layer
@@ -25,9 +31,6 @@ class Deep_Neural_Network:
                 self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
                 assert (self._parameters['W' + str(l)].shape == (layers_dims[l], layers_dims[l - 1]))
                 assert (self._parameters['b' + str(l)].shape == (layers_dims[l], 1))
-            # init the output layer
-            self._parameters['W' + str(L)] = np.random.randn(layers_dims[L - 1], layers_dims[L - 2]) * factor
-            self._parameters['b' + str(L)] = np.zeros((layers_dims[L - 1], 1))
 
     @property
     def depth(self):
@@ -42,7 +45,7 @@ class Deep_Neural_Network:
         Linear part of a layer's forward propagation
         :param A: -- activations from previous layer (or input data): (size of previous layer, number of examples)
         :param current_layer_index:
-        :return:
+        :returns Z: -- linear function value(WA[l-1] + b[l])
         """
         W = self._parameters['W' + str(current_layer_index)]
         b = self._parameters['b' + str(current_layer_index)]
@@ -69,11 +72,11 @@ class Deep_Neural_Network:
 
     def activation(self, previous_activation, layer_indx, activation_type):
         """
-        Forward activation step
-        :param previous_activation:
-        :param layer_indx:
-        :param activation_type:
-        :return:
+        Activation of the i-th layer
+        :param previous_activation: -- activations from previous layer (or input data): (size of previous layer, number of examples)
+        :param layer_indx: -- layer index
+        :param activation_type: -- activation function type
+        :returns A: -- post-activation value
         """
         Z = self.__linear_forward(previous_activation, layer_indx)
         if activation_type == Actvitaion_Function.SIGMOID:
@@ -86,24 +89,38 @@ class Deep_Neural_Network:
             A = self.tanh(Z)
         else:
             raise ValueError('Provide a valid activation function type: either ReLU, LReLU, sigmoid or tanh')
-        self._activation_cache[layer_indx] = A
+        #self._activation_cache[layer_indx] = A
         return A
+
+    def forward_propagation(self, X):
+        """
+        Forward propagation step for overall Neural Net structure
+        :param X:
+        :returns cache: -- activation cache for each layer
+        """
+        cache = []
+        A = X
+
+        for l in range(1, self._depth):
+            A_prev = A
+            A = self.activation(A_prev, l, Actvitaion_Function.ReLU)
+            cache.append(A)
+
+        net_output = self.activation(A, self._depth, Actvitaion_Function.SIGMOID)
+        cache.append(net_output)
+        return cache
+
 
 
 def main():
     n_layer_nn = Deep_Neural_Network([5, 4, 1])
-    for l in range(1, n_layer_nn.depth):
-        W_k = 'W' + str(l)
-        b_k = 'b' + str(l)
-
     X = np.random.randn(5, 40)
     A_prev = X
-    for l_i in range(1, n_layer_nn.depth):
-        post_activation = n_layer_nn.activation(A_prev, l_i, Actvitaion_Function.ReLU)
-        print('Post activation = {0}'.format(post_activation))
-        A_prev = post_activation
-    post_activation = n_layer_nn.activation(A_prev, n_layer_nn.depth, Actvitaion_Function.SIGMOID)
-    print('And the network output: ', post_activation)
+    activations = n_layer_nn.forward_propagation(X)
+    l = 1
+    for a in activations:
+        print('Activation of the {0}th layer = {1}'.format(l, a))
+        l += 1
 
 
 if __name__ == '__main__':
