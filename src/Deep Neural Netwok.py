@@ -95,7 +95,7 @@ class Deep_Neural_Network:
     def forward_propagation(self, X):
         """
         Forward propagation step for overall Neural Net structure
-        :param X:
+        :param X: -- input data(i.e. input matrix)
         :returns cache: -- activation cache for each layer
         """
         cache = []
@@ -110,6 +110,18 @@ class Deep_Neural_Network:
         cache.append(net_output)
         return cache
 
+    def compute_cost(self, net_output, Y):
+        """
+        Computes the cost over all training set
+        :param net_output:
+        :param Y: -- true "label" vector
+        :returns cost: -- cross-entropy cost(a mean value for the cross-entropy loss over all training examples)
+        """
+        # m = amount of training examples
+        m = Y.shape[1]
+        cost = -np.dot(1 / m, np.sum(np.dot(net_output).T) + np.dot(1 - Y, np.log(1 - net_output).T))
+        cost = np.squeeze(cost)
+        return cost
 
 
 def main():
