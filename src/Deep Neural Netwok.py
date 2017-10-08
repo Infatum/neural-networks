@@ -26,7 +26,7 @@ class Deep_Neural_Network:
                 assert (self._parameters['W' + str(l)].shape == (layers_dims[l], layers_dims[l - 1]))
                 assert (self._parameters['b' + str(l)].shape == (layers_dims[l], 1))
             # init the output layer
-            self._parameters['W' + str(L)] = np.random.randn(layers_dims[L - 1], layers_dims[L - 2])
+            self._parameters['W' + str(L)] = np.random.randn(layers_dims[L - 1], layers_dims[L - 2]) * factor
             self._parameters['b' + str(L)] = np.zeros((layers_dims[L - 1], 1))
 
     @property
@@ -37,7 +37,7 @@ class Deep_Neural_Network:
     def parameters(self):
         return self._parameters
 
-    def linear_forward(self, A, current_layer_index):
+    def __linear_forward(self, A, current_layer_index):
         """
         Linear part of a layer's forward propagation
         :param A: -- activations from previous layer (or input data): (size of previous layer, number of examples)
@@ -46,7 +46,6 @@ class Deep_Neural_Network:
         """
         W = self._parameters['W' + str(current_layer_index)]
         b = self._parameters['b' + str(current_layer_index)]
-        print('W.shape = ', W.shape)
         Z = np.dot(W, A) + b
         assert (Z.shape == (W.shape[0], A.shape[1]))
         return Z
@@ -68,16 +67,44 @@ class Deep_Neural_Network:
     def sigmoid(self, z):
         return 1.0 / (1.0 + np.exp(-z))
 
+    def activation(self, previous_activation, layer_indx, activation_type):
+        """
+        Forward activation step
+        :param previous_activation:
+        :param layer_indx:
+        :param activation_type:
+        :return:
+        """
+        Z = self.__linear_forward(previous_activation, layer_indx)
+        if activation_type == Actvitaion_Function.SIGMOID:
+            A = self.sigmoid(Z)
+        elif activation_type == Actvitaion_Function.ReLU:
+            A = self.ReLU(Z)
+        elif activation_type == Actvitaion_Function.LReLU:
+            A = self.LRelU(Z)
+        elif activation_type == Actvitaion_Function.TANH:
+            A = self.tanh(Z)
+        else:
+            raise ValueError('Provide a valid activation function type: either ReLU, LReLU, sigmoid or tanh')
+        self._activation_cache[layer_indx] = A
+        return A
+
 
 def main():
-    n_layer_nn = Deep_Neural_Network([5, 4, 3])
+    n_layer_nn = Deep_Neural_Network([5, 4, 1])
     for l in range(1, n_layer_nn.depth):
         W_k = 'W' + str(l)
         b_k = 'b' + str(l)
 
-    A = np.random.randn(4, 5)
-    Z = n_layer_nn.linear_forward(A, 3)
-    print('Z.shape = ', Z.shape)
+    X = np.random.randn(5, 40)
+    A_prev = X
+    for l_i in range(1, n_layer_nn.depth):
+        post_activation = n_layer_nn.activation(A_prev, l_i, Actvitaion_Function.ReLU)
+        print('Post activation = {0}'.format(post_activation))
+        A_prev = post_activation
+    post_activation = n_layer_nn.activation(A_prev, n_layer_nn.depth, Actvitaion_Function.SIGMOID)
+    print('And the network output: ', post_activation)
+
 
 if __name__ == '__main__':
     main()
