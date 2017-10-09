@@ -35,6 +35,10 @@ class Deep_Neural_Network:
                 assert (self._parameters['b' + str(l)].shape == (layers_dims[l], 1))
 
     @property
+    def activations(self):
+        return self._activation_cache
+
+    @property
     def depth(self):
         return self._depth
 
@@ -93,8 +97,7 @@ class Deep_Neural_Network:
             A = self.tanh(Z)
         else:
             raise ValueError('Provide a valid activation function type: either ReLU, LReLU, sigmoid or tanh')
-        self._activation_cache += [A]
-        self._linear_cache += [Z]
+        return A, Z
 
     def forward_propagation(self, X):
         """
@@ -110,11 +113,13 @@ class Deep_Neural_Network:
         for l in range(1, self._depth):
             A_prev = A
             A, Z = self.activation(A_prev, l, Actvitaion_Function.ReLU)
-            cache.append(A)
+            self._activation_cache.append(A)
+            self._linear_cache.append(Z)
 
-        net_output = self.activation(A, self._depth, Actvitaion_Function.SIGMOID)
-        cache.append(net_output)
-        return Z, cache
+        net_output, Z = self.activation(A, self._depth, Actvitaion_Function.SIGMOID)
+        self._activation_cache.append(net_output)
+        self._linear_cache.append(Z)
+        return self._activation_cache
 
     def compute_cost(self, net_output, Y):
         """
@@ -128,8 +133,7 @@ class Deep_Neural_Network:
         cost = -np.dot(1 / m, np.sum(np.dot(net_output).T) + np.dot(1 - Y, np.log(1 - net_output).T))
         cost = np.squeeze(cost)
         return cost
-
-    def __derivation(self, dZ, layer_index, activation_cache):
+    def __derivation(self, dZ, layer_index):
         """
         Linear portion for a backward propagation
         :param dZ: -- Gradient of the cost with respect to the linear output (of current layer l)
@@ -141,13 +145,14 @@ class Deep_Neural_Network:
         """
         # activation indexing
         l = layer_index - 1
-        A, A_prev = activation_cache[l], activation_cache[l - 1]
+        A, A_prev = self._activation_cache[l], self._activation_cache[l - 1]
         W, b = self._parameters['W' + str(layer_index)], self._parameters['b' + str(layer_index)]
         # amount of neurons in the previous layer
         m = A_prev.shape[1]
 
         dW = np.dot(1 / m, np.dot(dZ, A_prev.T))
         db = np.dot(1 / m, np.sum(dZ, axis=1, keepdims=True))
+        # todo: debug dimensions mismatch
         dA_prev = np.dot(W.T, dZ)
 
         assert (dA_prev.shape == A_prev.shape)
@@ -179,7 +184,6 @@ class Deep_Neural_Network:
         dZ[Z <= 0] = 0
         return dZ
 
-    # todo: realize tanh and LRelU gradients
     def __tanh_gradient(self, dA, Z):
         """
         Calculates hyperbolic tangent function gradient
@@ -201,10 +205,10 @@ class Deep_Neural_Network:
         dZ[Z <= 0] *= 0.001
         return dZ
 
-    def gradient_descent(self, dA, layer_index, activation_type):
+    def __gradient_descent(self, dA, layer_index, activation_type):
         """
         Gradient descent step for a backward propagation step
-        :param dA:
+        :param dA: -- post-activation gradient for current layer l
         :param linear_cache:
         :param activation_cache:
         :param activation_type:
@@ -213,22 +217,21 @@ class Deep_Neural_Network:
             dW: -- Gradient of the cost with respect to W (current layer l), same shape as W
             db: -- Gradient of the cost with respect to b (current layer l), same shape as b
         """
-        activation = self._activation_cache[layer_index - 1]
         linear = self._linear_cache[layer_index - 1]
         if activation_type == Actvitaion_Function.SIGMOID:
-            dZ = self.__sigmoid_gradient(dA, activation)
+            dZ = self.__sigmoid_gradient(dA, linear)
         elif activation_type == Actvitaion_Function.ReLU:
-            dZ = self.__ReLU_gradient(dA, activation)
+            dZ = self.__ReLU_gradient(dA, linear)
         elif activation_type == Actvitaion_Function.TANH:
-            dZ = self.__tanh_gradient(dA, activation)
+            dZ = self.__tanh_gradient(dA, linear)
         elif activation_type == Actvitaion_Function.LReLU:
-            dZ = self.__LReLU_gradient(dA, activation)
+            dZ = self.__LReLU_gradient(dA, linear)
         else:
             raise ValueError('Provide a valid activation function type: either ReLU, LReLU, sigmoid or tanh')
-        dA_prev, dW, db = self.__derivation(dZ, linear)
+        dA_prev, dW, db = self.__derivation(dZ, layer_index)
         return dA_prev, dW, db
 
-    def backward_propagation(self, layer_indx, Y):
+    def backward_propagation(self, Y):
         """
 
         :param layer_index:
@@ -238,7 +241,7 @@ class Deep_Neural_Network:
         :param db:
         :return:
         """
-        gradients = {}
+        grads = {}
         L = self._depth
         # get current layer cached activation values
         A = self._activation_cache[L - 1]
@@ -247,12 +250,19 @@ class Deep_Neural_Network:
 
         dA = -Y / A + (1 - Y) / (1 - A)
 
-        gradients['dA' + str(L)], gradients['dW' + str(L)], gradients['db' + str(L)] = self.gradient_descent(dA, L, activation_type=Actvitaion_Function.SIGMOID)
-        dA_prev = gradients['dA' + str(L)]
+        act_type = Actvitaion_Function.SIGMOID
+        grads['dA' + str(L)], grads['dW' + str(L)], grads['db' + str(L)] = self.__gradient_descent(dA, L, act_type)
+        dA_prev = grads['dA' + str(L)]
 
         for l in reversed(range(L - 1)):
-            dA_prev_tmp, dW_tmp, db_tmp = self.gradient_descent(dA_prev, l, activation_type=Actvitaion_Function.ReLU)
-            gradients['dA' + str(l)], gradients['dW' + str(l)], gradients['db' + str(l)] = dA_prev_tmp, dW_tmp, db_tmp
+            layer = l + 1
+            dA_prev_tmp, dW_tmp, db_tmp = self.__gradient_descent(dA_prev, layer, activation_type=Actvitaion_Function.ReLU)
+            grads['dA' + str(l)], grads['dW' + str(l)], grads['db' + str(l)] = dA_prev_tmp, dW_tmp, db_tmp
+            dA_prev = dA_prev_tmp
+
+        self._activation_cache.clear()
+        self._linear_cache.clear()
+        return grads
 
 
 def main():
@@ -264,7 +274,9 @@ def main():
     for a in activations:
         print('Activation of the {0}th layer = {1}'.format(l, a))
         l += 1
-    dZ = np.dot()
+    Y = np.random.randn(1, 40)
+    grads = n_layer_nn.backward_propagation(Y)
+    print('grads = ', grads)
 
 
 if __name__ == '__main__':
