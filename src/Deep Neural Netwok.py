@@ -20,9 +20,11 @@ class Deep_Neural_Network:
         """
         # number of layers in the network
         self._parameters = {}
-        self._activation_cache = {}
+        self._activation_cache = []
+        self._linear_cache = []
         L = len(layers_dims)
         self._depth = L - 1
+        np.random.seed(3)
         if layers_dims is not None:
             for l in range(1, L):
                 # initialize weights with random values for each hidden layer
@@ -91,8 +93,8 @@ class Deep_Neural_Network:
             A = self.tanh(Z)
         else:
             raise ValueError('Provide a valid activation function type: either ReLU, LReLU, sigmoid or tanh')
-        #self._activation_cache[layer_indx] = A
-        return A, Z
+        self._activation_cache += [A]
+        self._linear_cache += [Z]
 
     def forward_propagation(self, X):
         """
@@ -154,7 +156,7 @@ class Deep_Neural_Network:
 
         return dA_prev, dW, db
 
-    def __sigmoid_gradient(self, dA, A):
+    def __sigmoid_gradient(self, dA, Z):
         """
         Calculates sigmoid function gradient
         :param dA: -- post-activation gradient
@@ -162,37 +164,95 @@ class Deep_Neural_Network:
         :returns
             dZ: -- gradient of the cost with respect to Z
         """
-        s = 1 / (1 + np.exp(-A))
+        s = 1 / (1 + np.exp(-Z))
         dZ = dA * s * (1 - s)
         return dZ
 
-    def __ReLU_gradient(self, dA, A):
+    def __ReLU_gradient(self, dA, Z):
         """
         Calculates ReLU function gradient
         :param dA: -- post-activation gradient
         :param A: -- linear activation function cache 'Z'
-        :returns
-            dZ: -- gradient of the cost with respect to Z
+        :returns dZ: -- gradient of the cost with respect to Z
         """
         dZ = np.array(dA, copy=True)
-        dZ[A <= 0] = 0
+        dZ[Z <= 0] = 0
         return dZ
-    # todo: realize tanh and LRelU gradients
 
-    def gradient_descent(self, dA, linear_cache, activation_cache, activation_type):
+    # todo: realize tanh and LRelU gradients
+    def __tanh_gradient(self, dA, Z):
+        """
+        Calculates hyperbolic tangent function gradient
+        :param dA: -- post-activation gradient
+        :param A: -- post-activation gradient
+        :returns dZ: -- gradient of the cost with respect to Z
+        """
+        dZ = dA * (1 - np.power(np.tanh(Z), 2))
+        return dZ
+
+    def __LReLU_gradient(self, dA, Z):
+        """
+        Calculates leaky rectified linear unit function gradient
+        :param dA: -- post-activation gradient
+        :param Z: -- post-activation gradient
+        :returns dZ: -- gradient of the cost with respect to Z
+        """
+        dZ = np.array(dA, copy=True)
+        dZ[Z <= 0] *= 0.001
+        return dZ
+
+    def gradient_descent(self, dA, layer_index, activation_type):
         """
         Gradient descent step for a backward propagation step
         :param dA:
         :param linear_cache:
         :param activation_cache:
         :param activation_type:
+        :returns
+            dA_prev: -- Gradient of the cost with respect to the activation
+            dW: -- Gradient of the cost with respect to W (current layer l), same shape as W
+            db: -- Gradient of the cost with respect to b (current layer l), same shape as b
+        """
+        activation = self._activation_cache[layer_index - 1]
+        linear = self._linear_cache[layer_index - 1]
+        if activation_type == Actvitaion_Function.SIGMOID:
+            dZ = self.__sigmoid_gradient(dA, activation)
+        elif activation_type == Actvitaion_Function.ReLU:
+            dZ = self.__ReLU_gradient(dA, activation)
+        elif activation_type == Actvitaion_Function.TANH:
+            dZ = self.__tanh_gradient(dA, activation)
+        elif activation_type == Actvitaion_Function.LReLU:
+            dZ = self.__LReLU_gradient(dA, activation)
+        else:
+            raise ValueError('Provide a valid activation function type: either ReLU, LReLU, sigmoid or tanh')
+        dA_prev, dW, db = self.__derivation(dZ, linear)
+        return dA_prev, dW, db
+
+    def backward_propagation(self, layer_indx, Y):
+        """
+
+        :param layer_index:
+        :param Y:
+        :param dA_prev:
+        :param dW:
+        :param db:
         :return:
         """
-        if activation_type == Actvitaion_Function.SIGMOID:
-            dZ = self.__sigmoid_gradient(dA, activation_cache)
-        elif activation_type == Actvitaion_Function.ReLU:
-            dZ = self.__ReLU_gradient(dA, activation_cache)
+        gradients = {}
+        L = self._depth
+        # get current layer cached activation values
+        A = self._activation_cache[L - 1]
+        Z = self._linear_cache[L - 1]
+        Y = Y.reshape(A.shape)
 
+        dA = -Y / A + (1 - Y) / (1 - A)
+
+        gradients['dA' + str(L)], gradients['dW' + str(L)], gradients['db' + str(L)] = self.gradient_descent(dA, L, activation_type=Actvitaion_Function.SIGMOID)
+        dA_prev = gradients['dA' + str(L)]
+
+        for l in reversed(range(L - 1)):
+            dA_prev_tmp, dW_tmp, db_tmp = self.gradient_descent(dA_prev, l, activation_type=Actvitaion_Function.ReLU)
+            gradients['dA' + str(l)], gradients['dW' + str(l)], gradients['db' + str(l)] = dA_prev_tmp, dW_tmp, db_tmp
 
 
 def main():
