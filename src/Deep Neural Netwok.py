@@ -22,6 +22,9 @@ class Deep_Neural_Network:
         self._parameters = {}
         self._activation_cache = []
         self._linear_cache = []
+        # todo: features
+        #self._features = { 'X',  }
+
         L = len(layers_dims)
         self._depth = L - 1
         np.random.seed(3)
@@ -38,13 +41,37 @@ class Deep_Neural_Network:
     def activations(self):
         return self._activation_cache
 
+    # todo: remove after debug
+    @activations.setter
+    def activations(self, A):
+        self._activation_cache = A
+
     @property
     def depth(self):
         return self._depth
 
+    # todo: remove after debug
+    @depth.setter
+    def depth(self, d):
+        self._depth = d
+
     @property
     def parameters(self):
         return self._parameters
+
+    # todo: remove after debug
+    @parameters.setter
+    def parameters(self, p_s):
+        self._parameters = p_s
+
+    @property
+    def linear_cache(self):
+        return self._linear_cache
+
+    # todo: remove after debug
+    @linear_cache.setter
+    def linear_cache(self, cache):
+        self._linear_cache = cache
 
     def __linear_forward(self, A, current_layer_index):
         """
@@ -133,6 +160,7 @@ class Deep_Neural_Network:
         cost = -np.dot(1 / m, np.sum(np.dot(net_output).T) + np.dot(1 - Y, np.log(1 - net_output).T))
         cost = np.squeeze(cost)
         return cost
+
     def __derivation(self, dZ, layer_index):
         """
         Linear portion for a backward propagation
@@ -143,9 +171,13 @@ class Deep_Neural_Network:
             dW: -- Gradient of the cost with respect to W (current layer l)
             db: -- Gradient of the cost with respect to b (current layer l)
         """
-        # activation indexing
-        l = layer_index - 1
-        A, A_prev = self._activation_cache[l], self._activation_cache[l - 1]
+        #todo: refactor me
+        # linear_cache indexing
+        # l = layer_index - 1
+        # current layer's activation values
+        A = self._activation_cache[layer_index]
+        # get previous layer activation values if layer isn't first, either assign prev. activ. to the feature vector
+        A_prev = self._activation_cache[layer_index - 1]
         W, b = self._parameters['W' + str(layer_index)], self._parameters['b' + str(layer_index)]
         # amount of neurons in the previous layer
         m = A_prev.shape[1]
@@ -244,10 +276,10 @@ class Deep_Neural_Network:
         grads = {}
         L = self._depth
         # get current layer cached activation values
-        A = self._activation_cache[L - 1]
-        Z = self._linear_cache[L - 1]
+        A = self._activation_cache[L]
         Y = Y.reshape(A.shape)
 
+        # calculate output layer's(sigmoid) activation f-n derivative
         dA = -Y / A + (1 - Y) / (1 - A)
 
         act_type = Actvitaion_Function.SIGMOID
@@ -257,7 +289,7 @@ class Deep_Neural_Network:
         for l in reversed(range(L - 1)):
             layer = l + 1
             dA_prev_tmp, dW_tmp, db_tmp = self.__gradient_descent(dA_prev, layer, activation_type=Actvitaion_Function.ReLU)
-            grads['dA' + str(l)], grads['dW' + str(l)], grads['db' + str(l)] = dA_prev_tmp, dW_tmp, db_tmp
+            grads['dA' + str(layer)], grads['dW' + str(layer)], grads['db' + str(layer)] = dA_prev_tmp, dW_tmp, db_tmp
             dA_prev = dA_prev_tmp
 
         self._activation_cache.clear()
@@ -265,18 +297,58 @@ class Deep_Neural_Network:
         return grads
 
 
+def L_model_backward_test_case(dnn_model):
+    """
+    X = np.random.rand(3,2)
+    Y = np.array([[1, 1]])
+    parameters = {'W1': np.array([[ 1.78862847,  0.43650985,  0.09649747]]), 'b1': np.array([[ 0.]])}
+
+    aL, caches = (np.array([[ 0.60298372,  0.87182628]]), [((np.array([[ 0.20445225,  0.87811744],
+           [ 0.02738759,  0.67046751],
+           [ 0.4173048 ,  0.55868983]]),
+    np.array([[ 1.78862847,  0.43650985,  0.09649747]]),
+    np.array([[ 0.]])),
+   np.array([[ 0.41791293,  1.91720367]]))])
+   """
+    np.random.seed(3)
+    AL = np.random.randn(1, 2)
+    Y = np.array([[1, 0]])
+
+    A1 = np.random.randn(4,2)
+    W1 = np.random.randn(3,4)
+    b1 = np.random.randn(3,1)
+    Z2 = np.random.randn(3,2)
+
+    A2 = np.random.randn(3,2)
+    W2 = np.random.randn(1,3)
+    b2 = np.random.randn(1,1)
+    Z3 = np.random.randn(1,2)
+
+    linear_cache = [Z2, Z3]
+    activation_cache = [A1, A2, AL]
+
+    dnn_model.depth = 2
+    dnn_model.linear_cache = linear_cache
+    dnn_model.activations = activation_cache
+    dnn_model.parameters['W1'], dnn_model.parameters['b1'], dnn_model.parameters['W2'], dnn_model.parameters['b2'] = W1, b1, W2, b2
+
+    return Y
+
+
+def print_grads(grads):
+    print("dW1 = " + str(grads["dW1"]))
+    print("db1 = " + str(grads["db1"]))
+    print("dA1 = " + str(
+        grads["dA2"]))  # this is done on purpose to be consistent with lecture where we normally start with A0
+    # in this implementation we started with A1, hence we bump it up by 1.
+
+
 def main():
-    n_layer_nn = Deep_Neural_Network([5, 4, 2, 1])
-    X = np.random.randn(5, 40)
-    A_prev = X
-    activations = n_layer_nn.forward_propagation(X)
-    l = 1
-    for a in activations:
-        print('Activation of the {0}th layer = {1}'.format(l, a))
-        l += 1
-    Y = np.random.randn(1, 40)
+    n_layer_nn = Deep_Neural_Network([4, 3, 1])
+    Y = L_model_backward_test_case(n_layer_nn)
     grads = n_layer_nn.backward_propagation(Y)
-    print('grads = ', grads)
+
+    print_grads(grads)
 
 
 if __name__ == '__main__':
