@@ -23,8 +23,8 @@ class Deep_Neural_Network:
         self._parameters = {}
         self._activation_cache = []
         self._linear_cache = []
-        # todo: features
-        #self._features = { 'X',  }
+        # todo: features (cache or not - that's the question'
+        #self._features = {'X': layers_dims[0]}
 
         L = len(layers_dims)
         self._depth = L - 1
@@ -40,43 +40,22 @@ class Deep_Neural_Network:
 
     @property
     def activations(self):
-        return self._activation_cache
-
-    # todo: remove after debug
-    @activations.setter
-    def activations(self, A):
-        self._activation_cache = A
+        A = tuple(self._activation_cache)
+        return A
 
     @property
     def depth(self):
         return self._depth
 
-    # todo: remove after debug
-    @depth.setter
-    def depth(self, d):
-        self._depth = d
-
     @property
     def parameters(self):
+        # todo: return an immutable data structure to avoid changes of the dnn parameters
         return self._parameters
-
-    # todo: remove after debug
-    @parameters.setter
-    def parameters(self, p_s):
-        self._parameters = p_s
-
-    @property
-    def linear_cache(self):
-        return self._linear_cache
-
-    # todo: remove after debug
-    @linear_cache.setter
-    def linear_cache(self, cache):
-        self._linear_cache = cache
 
     def __linear_forward(self, A, current_layer_index):
         """
         Linear part of a layer's forward propagation
+
         :param A: -- activations from previous layer (or input data): (size of previous layer, number of examples)
         :param current_layer_index:
         :returns Z: -- linear function value(WA[l-1] + b[l])
@@ -88,17 +67,30 @@ class Deep_Neural_Network:
         return Z
 
     def ReLU(self, z):
+        """
+        Rectified Linear Unit function (activation f-n)
+
+        :param z: -- linear function value(corresponds to WA + b)
+        :returns: -- post activation value
+        """
         return z * (z > 0)
 
     def LRelU(self, z):
         """
-        Leaky Rectified Linear Unit function
+        Leaky Rectified Linear Unit function (activation f-n)
+
         :param z: -- linear function value(corresponds to WA + b)
-        :return:
+        :returns: -- post activation value
         """
         return z * (z > np.dot(0.001, z))
 
     def tanh(self, z):
+        """
+        Hyperbolic tangent function (activation f-n)
+
+        :param z: -- linear function value(corresponds to WA + b)
+        :returns: -- post activation value
+        """
         return np.tanh(z)
 
     def sigmoid(self, z):
@@ -107,6 +99,7 @@ class Deep_Neural_Network:
     def activation(self, previous_activation, layer_indx, activation_type):
         """
         Activation of the i-th layer
+
         :param previous_activation: -- activations from previous layer (or input data): (size of previous layer, number of examples)
         :param layer_indx: -- layer index
         :param activation_type: -- activation function type
@@ -130,6 +123,7 @@ class Deep_Neural_Network:
     def forward_propagation(self, X):
         """
         Forward propagation step for overall Neural Net structure
+
         :param X: -- input data(i.e. input matrix)
         :returns
             cache: -- activation cache for each layer
@@ -152,6 +146,7 @@ class Deep_Neural_Network:
     def compute_cost(self, net_output, Y):
         """
         Computes the cost over all training set
+
         :param net_output:
         :param Y: -- true "label" vector
         :returns cost: -- cross-entropy cost(a mean value for the cross-entropy loss over all training examples)
@@ -164,7 +159,8 @@ class Deep_Neural_Network:
 
     def __derivation(self, dZ, layer_index):
         """
-        Linear portion for a backward propagation
+        Linear portion for a backward propagation step
+
         :param dZ: -- Gradient of the cost with respect to the linear output (of current layer l)
         :param activation_cache: -- list of cached activation value for each layer with L-1 indexing
         :returns
@@ -172,10 +168,6 @@ class Deep_Neural_Network:
             dW: -- Gradient of the cost with respect to W (current layer l)
             db: -- Gradient of the cost with respect to b (current layer l)
         """
-        #todo: refactor me
-        # linear_cache indexing
-        # l = layer_index - 1
-        # current layer's activation values
         A = self._activation_cache[layer_index]
         # get previous layer activation values if layer isn't first, either assign prev. activ. to the feature vector
         A_prev = self._activation_cache[layer_index - 1]
@@ -185,7 +177,6 @@ class Deep_Neural_Network:
 
         dW = np.dot(1 / m, np.dot(dZ, A_prev.T))
         db = np.dot(1 / m, np.sum(dZ, axis=1, keepdims=True))
-        # todo: debug dimensions mismatch
         dA_prev = np.dot(W.T, dZ)
 
         assert (dA_prev.shape == A_prev.shape)
@@ -197,6 +188,7 @@ class Deep_Neural_Network:
     def __sigmoid_gradient(self, dA, Z):
         """
         Calculates sigmoid function gradient
+
         :param dA: -- post-activation gradient
         :param A: -- linear activation function cache 'Z'
         :returns
@@ -209,6 +201,7 @@ class Deep_Neural_Network:
     def __ReLU_gradient(self, dA, Z):
         """
         Calculates ReLU function gradient
+
         :param dA: -- post-activation gradient
         :param A: -- linear activation function cache 'Z'
         :returns dZ: -- gradient of the cost with respect to Z
@@ -231,6 +224,7 @@ class Deep_Neural_Network:
     def __LReLU_gradient(self, dA, Z):
         """
         Calculates leaky rectified linear unit function gradient
+
         :param dA: -- post-activation gradient
         :param Z: -- post-activation gradient
         :returns dZ: -- gradient of the cost with respect to Z
@@ -289,7 +283,9 @@ class Deep_Neural_Network:
 
         for l in reversed(range(L - 1)):
             layer = l + 1
-            dA_prev_tmp, dW_tmp, db_tmp = self.__gradient_descent(dA_prev, layer, activation_type=Actvitaion_Function.ReLU)
+            dA_prev_tmp, dW_tmp, db_tmp = self.__gradient_descent(dA_prev,
+                                                                  layer,
+                                                                  activation_type=Actvitaion_Function.ReLU)
             grads['dA' + str(layer)], grads['dW' + str(layer)], grads['db' + str(layer)] = dA_prev_tmp, dW_tmp, db_tmp
             dA_prev = dA_prev_tmp
 
@@ -301,14 +297,8 @@ class Deep_Neural_Network:
         """
         Update parameters using gradient descent
 
-        Arguments:
-        parameters -- python dictionary containing your parameters
-        grads -- python dictionary containing your gradients, output of L_model_backward
-
-        Returns:
-        parameters -- python dictionary containing your updated parameters
-                      parameters["W" + str(l)] = ...
-                      parameters["b" + str(l)] = ...
+        :param grads: -- gradients
+        :param learning_rate: -- size of a gradient descent step
         """
         # Update rule for each parameter. Use a for loop.
         for l in range(1, self._depth + 1):
@@ -319,21 +309,9 @@ class Deep_Neural_Network:
 
 
 def main():
-    # n_layer_nn = Deep_Neural_Network([4, 3, 1])
-    # Y = ts_cs.L_model_backward_test_case(n_layer_nn)
-    # grads = n_layer_nn.backward_propagation(Y)
-    #
-    # ts_cs.print_grads(grads)
-    dnn_model = Deep_Neural_Network([4, 3, 1])
-    dnn_instance, grads = ts_cs.update_parameters_test_case(dnn_model)
-    dnn_instance.update_parameters(grads, 0.1)
-
-    print("W1 = " + str(dnn_instance.parameters["W1"]))
-    print("b1 = " + str(dnn_instance.parameters["b1"]))
-    print("W2 = " + str(dnn_instance.parameters["W2"]))
-    print("b2 = " + str(dnn_instance.parameters["b2"]))
-
-
+    dnn_model = Deep_Neural_Network([3, 2, 1])
+    depth = dnn_model.depth
+    depth = 8
 
 if __name__ == '__main__':
     main()
