@@ -220,6 +220,7 @@ class Deep_Neural_Network:
     def __tanh_gradient(self, dA, Z):
         """
         Calculates hyperbolic tangent function gradient
+
         :param dA: -- post-activation gradient
         :param A: -- post-activation gradient
         :returns dZ: -- gradient of the cost with respect to Z
@@ -241,6 +242,7 @@ class Deep_Neural_Network:
     def __gradient_descent(self, dA, layer_index, activation_type):
         """
         Gradient descent step for a backward propagation step
+
         :param dA: -- post-activation gradient for current layer l
         :param linear_cache:
         :param activation_cache:
@@ -267,6 +269,7 @@ class Deep_Neural_Network:
     def backward_propagation(self, Y):
         """
         Backward propagation step for the [LINEAR->RELU] * (L-1) -> LINEAR -> SIGMOID group
+
         :param layer_index:
         :param Y: -- true "label" vector (i.e. true/false)
         :returns grads: -- a dictionary with gradients
@@ -294,14 +297,42 @@ class Deep_Neural_Network:
         self._linear_cache.clear()
         return grads
 
+    def update_parameters(self, grads, learning_rate):
+        """
+        Update parameters using gradient descent
+
+        Arguments:
+        parameters -- python dictionary containing your parameters
+        grads -- python dictionary containing your gradients, output of L_model_backward
+
+        Returns:
+        parameters -- python dictionary containing your updated parameters
+                      parameters["W" + str(l)] = ...
+                      parameters["b" + str(l)] = ...
+        """
+        # Update rule for each parameter. Use a for loop.
+        for l in range(1, self._depth + 1):
+            W, b, dW, db = self._parameters['W' + str(l)], self._parameters['b' + str(l)], grads['dW' + str(l)], grads[
+                'db' + str(l)]
+            self._parameters['W' + str(l)] = W - learning_rate * dW
+            self._parameters['b' + str(l)] = b - learning_rate * db
 
 
 def main():
-    n_layer_nn = Deep_Neural_Network([4, 3, 1])
-    Y = ts_cs.L_model_backward_test_case(n_layer_nn)
-    grads = n_layer_nn.backward_propagation(Y)
+    # n_layer_nn = Deep_Neural_Network([4, 3, 1])
+    # Y = ts_cs.L_model_backward_test_case(n_layer_nn)
+    # grads = n_layer_nn.backward_propagation(Y)
+    #
+    # ts_cs.print_grads(grads)
+    dnn_model = Deep_Neural_Network([4, 3, 1])
+    dnn_instance, grads = ts_cs.update_parameters_test_case(dnn_model)
+    dnn_instance.update_parameters(grads, 0.1)
 
-    ts_cs.print_grads(grads)
+    print("W1 = " + str(dnn_instance.parameters["W1"]))
+    print("b1 = " + str(dnn_instance.parameters["b1"]))
+    print("W2 = " + str(dnn_instance.parameters["W2"]))
+    print("b2 = " + str(dnn_instance.parameters["b2"]))
+
 
 
 if __name__ == '__main__':
