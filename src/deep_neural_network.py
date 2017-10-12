@@ -49,7 +49,7 @@ class Deep_Neural_Network:
 
     @property
     def parameters(self):
-        # todo: return an immutable data structure to avoid changes of the dnn parameters
+        # todo: return an immutable data structure to avoid changes of the   dnn parameters
         return self._parameters
 
     def __linear_forward(self, A, current_layer_index):
@@ -126,7 +126,7 @@ class Deep_Neural_Network:
 
         :param X: -- input data(i.e. input matrix)
         :returns
-            cache: -- activation cache for each layer
+            net_output: -- activation of the last(output) layer
             Z: -- linear cache for each layer
         """
         cache = []
@@ -141,7 +141,7 @@ class Deep_Neural_Network:
         net_output, Z = self.activation(A, self._depth, Actvitaion_Function.SIGMOID)
         self._activation_cache.append(net_output)
         self._linear_cache.append(Z)
-        return self._activation_cache
+        return net_output
 
     def compute_cost(self, net_output, Y):
         """
