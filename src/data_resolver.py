@@ -24,8 +24,8 @@ class Data_Resolver:
 
     def flatten_data(self, data):
         train_img_data, train_label_data, test_img_data, test_label_data, classes = data
-        train_img_data_flatten = train_img_data.reshape(train_img_data[0], -1).T
-        test_img_data_flatten = test_img_data.reshape(test_img_data[0], -1).T
+        train_img_data_flatten = train_img_data.reshape(train_img_data.shape[0], -1).T
+        test_img_data_flatten = test_img_data.reshape(test_img_data.shape[0], -1).T
         return train_img_data_flatten, train_label_data, test_img_data_flatten, test_label_data, classes
 
     def standardize_data(self, train_img_data, test_img_data):
