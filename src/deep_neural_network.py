@@ -24,7 +24,7 @@ class Deep_Neural_Network:
         self._activation_cache = []
         self._linear_cache = []
         # todo: features (cache or not - that's the question'
-        #self._features = {'X': layers_dims[0]}
+        self._features = None
 
         L = len(layers_dims)
         self._depth = L - 1
@@ -133,6 +133,7 @@ class Deep_Neural_Network:
         """
         cache = []
         A = X
+        self._features = X
 
         for l in range(1, self._depth):
             A_prev = A
@@ -158,7 +159,7 @@ class Deep_Neural_Network:
         """
         # m = amount of training examples
         m = Y.shape[1]
-        cost = -np.dot(1 / m, np.sum(np.log(net_output).T) + np.dot(1 - Y, np.log(1 - net_output).T))
+        cost = -np.dot(1. / m, np.sum(np.dot(Y, np.log(net_output).T) + np.dot(1 - Y, np.log(1 - net_output).T)))
         cost = np.squeeze(cost)
         return cost
 
@@ -175,8 +176,8 @@ class Deep_Neural_Network:
         """
         A = self._activation_cache[layer_index - 1]
         # get previous layer activation values if layer isn't first, either assign prev. activ. to the feature vector
-        # todo: find out and debug what should be an A_prev value for the first layer
-        A_prev = self._activation_cache[layer_index - 2]
+        # todo: find out what should be an A_prev value for the first layer
+        A_prev = self._activation_cache[layer_index - 2] if layer_index > 1 else self._features
         W, b = self._parameters['W' + str(layer_index)], self._parameters['b' + str(layer_index)]
         # amount of neurons in the previous layer
         m = A_prev.shape[1]

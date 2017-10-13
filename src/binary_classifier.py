@@ -14,7 +14,7 @@ class Model_Type(Enum):
 class Binary_Classifier:
 
     def __init__(self, layers_dimensions, model_type=Model_Type.Logistic_Regression, learning_rate=0.0075, number_of_iterations=3000, print_cost=True):
-        np.random.seed(1)
+
         self._costs = []
         self._model_type = model_type
         self._learning_rate = learning_rate
@@ -42,7 +42,6 @@ class Binary_Classifier:
 
     def train_model(self):
         data_manager = data_resolver.Data_Resolver(True)
-        np.random.seed(1)
 
         for i in range(0, self._numb_of_iter):
             model_output = self._model.forward_propagation(data_manager.train_image_data)
@@ -65,9 +64,7 @@ class Binary_Classifier:
 
 
 def main():
-    np.random.seed(1)
-    bin_classifier = Binary_Classifier(layers_dimensions=(12288, 20, 7, 5, 1), model_type=Model_Type.DNN,
-                                       number_of_iterations=2500, print_cost=True)
+    bin_classifier = Binary_Classifier((12288, 20, 7, 5, 1), Model_Type.DNN, 0.01, 2500, print_cost=True)
     bin_classifier.train_model()
 
 if __name__ == '__main__':
