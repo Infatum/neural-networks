@@ -28,7 +28,7 @@ class Deep_Neural_Network:
 
         L = len(layers_dims)
         self._depth = L - 1
-        np.random.seed(3)
+
         if layers_dims is not None:
             for l in range(1, L):
                 # initialize weights with random values for each hidden layer
@@ -49,7 +49,7 @@ class Deep_Neural_Network:
 
     @property
     def parameters(self):
-        # todo: return an immutable data structure to avoid changes of the   dnn parameters
+        # todo: return an immutable data structure to avoid changes of the dnn parameters
         return self._parameters
 
     def __linear_forward(self, A, current_layer_index):
@@ -60,6 +60,7 @@ class Deep_Neural_Network:
         :param current_layer_index:
         :returns Z: -- linear function value(WA[l-1] + b[l])
         """
+        # todo: find out why W differs from Coursera's version
         W = self._parameters['W' + str(current_layer_index)]
         b = self._parameters['b' + str(current_layer_index)]
         Z = np.dot(W, A) + b
@@ -107,6 +108,7 @@ class Deep_Neural_Network:
             A: -- post-activation value
             Z: -- linear cache(linear function value)
         """
+        # todo: debug incorrect linear function calculation(Z)
         Z = self.__linear_forward(previous_activation, layer_indx)
         if activation_type == Actvitaion_Function.SIGMOID:
             A = self.sigmoid(Z)
@@ -134,6 +136,7 @@ class Deep_Neural_Network:
 
         for l in range(1, self._depth):
             A_prev = A
+            # todo: debug activation mismatch
             A, Z = self.activation(A_prev, l, Actvitaion_Function.ReLU)
             self._activation_cache.append(A)
             self._linear_cache.append(Z)
@@ -141,6 +144,8 @@ class Deep_Neural_Network:
         net_output, Z = self.activation(A, self._depth, Actvitaion_Function.SIGMOID)
         self._activation_cache.append(net_output)
         self._linear_cache.append(Z)
+
+        assert (net_output.shape == (1, X.shape[1]))
         return net_output
 
     def compute_cost(self, net_output, Y):
@@ -153,7 +158,7 @@ class Deep_Neural_Network:
         """
         # m = amount of training examples
         m = Y.shape[1]
-        cost = -np.dot(1 / m, np.sum(np.dot(net_output).T) + np.dot(1 - Y, np.log(1 - net_output).T))
+        cost = -np.dot(1 / m, np.sum(np.log(net_output).T) + np.dot(1 - Y, np.log(1 - net_output).T))
         cost = np.squeeze(cost)
         return cost
 
@@ -168,9 +173,10 @@ class Deep_Neural_Network:
             dW: -- Gradient of the cost with respect to W (current layer l)
             db: -- Gradient of the cost with respect to b (current layer l)
         """
-        A = self._activation_cache[layer_index]
+        A = self._activation_cache[layer_index - 1]
         # get previous layer activation values if layer isn't first, either assign prev. activ. to the feature vector
-        A_prev = self._activation_cache[layer_index - 1]
+        # todo: find out and debug what should be an A_prev value for the first layer
+        A_prev = self._activation_cache[layer_index - 2]
         W, b = self._parameters['W' + str(layer_index)], self._parameters['b' + str(layer_index)]
         # amount of neurons in the previous layer
         m = A_prev.shape[1]
@@ -269,19 +275,19 @@ class Deep_Neural_Network:
         :returns grads: -- a dictionary with gradients
         """
         grads = {}
-        L = self._depth
+        iters, l = self._depth - 1, self._depth
         # get current layer cached activation values
-        A = self._activation_cache[L]
+        A = self._activation_cache[iters]
         Y = Y.reshape(A.shape)
 
         # calculate output layer's(sigmoid) activation f-n derivative
         dA = -Y / A + (1 - Y) / (1 - A)
 
         act_type = Actvitaion_Function.SIGMOID
-        grads['dA' + str(L)], grads['dW' + str(L)], grads['db' + str(L)] = self.__gradient_descent(dA, L, act_type)
-        dA_prev = grads['dA' + str(L)]
+        grads['dA' + str(l)], grads['dW' + str(l)], grads['db' + str(l)] = self.__gradient_descent(dA, l, act_type)
+        dA_prev = grads['dA' + str(l)]
 
-        for l in reversed(range(L - 1)):
+        for l in reversed(range(iters)):
             layer = l + 1
             dA_prev_tmp, dW_tmp, db_tmp = self.__gradient_descent(dA_prev,
                                                                   layer,

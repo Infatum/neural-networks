@@ -42,10 +42,12 @@ class Binary_Classifier:
 
     def train_model(self):
         data_manager = data_resolver.Data_Resolver(True)
+        np.random.seed(1)
 
         for i in range(0, self._numb_of_iter):
             model_output = self._model.forward_propagation(data_manager.train_image_data)
             cost = self._model.compute_cost(model_output, data_manager.train_label_data)
+            # todo: find out why dA_prev and A_prev dimensions mismatch
             grads = self._model.backward_propagation(data_manager.train_label_data)
             self._model.update_parameters(grads, self._learning_rate)
 
@@ -63,8 +65,9 @@ class Binary_Classifier:
 
 
 def main():
-    bin_classifier = Binary_Classifier(layers_dimensions=(12288, 7, 1), model_type=Model_Type.DNN,
-                                       number_of_iterations=2200, print_cost=True)
+    np.random.seed(1)
+    bin_classifier = Binary_Classifier(layers_dimensions=(12288, 20, 7, 5, 1), model_type=Model_Type.DNN,
+                                       number_of_iterations=2500, print_cost=True)
     bin_classifier.train_model()
 
 if __name__ == '__main__':
