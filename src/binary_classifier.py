@@ -22,6 +22,10 @@ class Binary_Classifier:
         self._print_cost = print_cost
         self._model = self.init_model(layers_dimensions, Model_Type.DNN)
 
+    @property
+    def model(self):
+        return self._model
+
     def init_model(self, layers_dims=0, model_type=Model_Type.Logistic_Regression):
         """
         Initialize predictive model for a binary classification problem
@@ -40,13 +44,10 @@ class Binary_Classifier:
             raise NotImplemented('Haven''t implemented yet, sorry folks')
         return model
 
-    def train_model(self):
-        data_manager = data_resolver.Data_Resolver(True)
-
+    def train_model(self, data_manager):
         for i in range(0, self._numb_of_iter):
             model_output = self._model.forward_propagation(data_manager.train_image_data)
             cost = self._model.compute_cost(model_output, data_manager.train_label_data)
-            # todo: find out why dA_prev and A_prev dimensions mismatch
             grads = self._model.backward_propagation(data_manager.train_label_data)
             self._model.update_parameters(grads, self._learning_rate)
 
@@ -56,16 +57,28 @@ class Binary_Classifier:
             if self._print_cost and i % 100 == 0:
                 self._costs.append(cost)
 
-        plt.plot(np.squeeze(self._costs))
-        plt.ylabel('cost')
-        plt.xlabel('iterations (per tens)')
+        plot = plt.plot(np.squeeze(self._costs))
+        plot.ylabel('cost')
+        plot.xlabel('iterations (per tens)')
         plt.title('Learning rate =' + str(self._learning_rate))
         plt.show()
+
+    def predict(self, data_resolver, dataset_type='train', print_results=True):
+        if dataset_type == 'train':
+            predictions, accuracy = self._model.predict(data_resolver.train_image_data, data_resolver.train_label_data)
+        elif dataset_type == 'test':
+            predictions, accuracy = self._model.predict(data_resolver.test_image_data, data_resolver.test_label_data)
+        else:
+            raise NotImplemented('No development set available now. Please enter correct values: train or test')
 
 
 def main():
     bin_classifier = Binary_Classifier((12288, 20, 7, 5, 1), Model_Type.DNN, 0.01, 2500, print_cost=True)
-    bin_classifier.train_model()
+    data_manager = data_resolver.Data_Resolver(True)
+    bin_classifier.train_model(data_manager)
+    bin_classifier.predict(data_manager, 'train', True)
+    bin_classifier.predict(data_manager, 'test', True)
+
 
 if __name__ == '__main__':
     main()

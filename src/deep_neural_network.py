@@ -32,7 +32,8 @@ class Deep_Neural_Network:
         if layers_dims is not None:
             for l in range(1, L):
                 # initialize weights with random values for each hidden layer
-                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) * factor
+                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) / np.sqrt(
+            layers_dims[l - 1])
                 # initialize biases with zeros for each hidden layer
                 self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
                 assert (self._parameters['W' + str(l)].shape == (layers_dims[l], layers_dims[l - 1]))
@@ -159,7 +160,7 @@ class Deep_Neural_Network:
         """
         # m = amount of training examples
         m = Y.shape[1]
-        cost = -np.dot(1. / m, np.sum(np.dot(Y, np.log(net_output).T) + np.dot(1 - Y, np.log(1 - net_output).T)))
+        cost = (1. / m) * (-np.dot(Y, np.log(net_output).T) - np.dot(1 - Y, np.log(1 - net_output).T))
         cost = np.squeeze(cost)
         return cost
 
@@ -313,6 +314,33 @@ class Deep_Neural_Network:
                 'db' + str(l)]
             self._parameters['W' + str(l)] = W - learning_rate * dW
             self._parameters['b' + str(l)] = b - learning_rate * db
+
+    def predict(self, test_set, labels, print_results=True):
+        """
+        This function is used to predict the results of a multilayer neural network.
+
+        :param test_set: -- a data set that is used to measure the DNN accuracy
+        :param labels: -- correct answers for the given test dataset
+        :returns
+            p: -- predictions for the given dataset
+            accuracy:  -- the accuracy of this particular trained model
+        """
+        m = test_set.shape[1]
+        predictions = np.zeros((1, m))
+
+        # Forward propagation
+        dnn_outputs = self.forward_propagation(test_set)
+
+        for i in range(0, dnn_outputs.shape[1]):
+            if dnn_outputs[0, i] > 0.5:
+                predictions[0, i] = 1
+            else:
+                predictions[0, i] = 0
+        accuracy = np.sum((predictions == labels) / m)
+
+        if print_results:
+            print('Accuracy: ', accuracy)
+        return predictions, accuracy
 
 
 def main():
