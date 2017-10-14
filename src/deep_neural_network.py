@@ -315,7 +315,7 @@ class Deep_Neural_Network:
             self._parameters['W' + str(l)] = W - learning_rate * dW
             self._parameters['b' + str(l)] = b - learning_rate * db
 
-    def predict(self, test_set, labels, print_results=True):
+    def predict(self, test_set, labels):
         """
         This function is used to predict the results of a multilayer neural network.
 
@@ -337,9 +337,6 @@ class Deep_Neural_Network:
             else:
                 predictions[0, i] = 0
         accuracy = np.sum((predictions == labels) / m)
-
-        if print_results:
-            print('Accuracy: ', accuracy)
         return predictions, accuracy
 
 
