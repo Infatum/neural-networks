@@ -61,7 +61,6 @@ class Binary_Classifier:
         plt.ylabel('cost')
         plt.xlabel('iterations (per tens)')
         plt.title('Learning rate =' + str(self._learning_rate))
-        plt.show()
 
     def predict(self, data_resolver, dataset_type='train', print_results=True):
         if dataset_type == 'train':
@@ -71,7 +70,7 @@ class Binary_Classifier:
         elif dataset_type == 'test':
             predictions, accuracy = self._model.predict(data_resolver.test_image_data, data_resolver.test_label_data)
             if print_results:
-                print_results('Test accuracy: ', accuracy)
+                print('Test accuracy: ', accuracy)
         else:
             raise NotImplemented('No development set available now. Please enter correct values: train or test')
         return predictions, accuracy
@@ -83,7 +82,7 @@ def main():
     bin_classifier.train_model(data_manager)
     bin_classifier.predict(data_manager, 'train', True)
     bin_classifier.predict(data_manager, 'test', True)
-
+    plt.show()
 
 if __name__ == '__main__':
     main()
