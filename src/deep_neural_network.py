@@ -41,7 +41,6 @@ class Deep_Neural_Network:
         initialize weights with Xavier initialization for each hidden layer and biases with zeros
 
         :param layers_dims: -- dimensions structure of the layers for DNN
-        :param depth: -- DNN's amount of layers
         """
         if layers_dims is not None:
             for l in range(1, self._depth):
@@ -51,6 +50,20 @@ class Deep_Neural_Network:
                 self._parameters['b' + str(l)] = np.zeros((dim, 1))
                 assert (self._parameters['W' + str(l)].shape == (layers_dims[l], layers_dims[l - 1]))
                 assert (self._parameters['b' + str(l)].shape == (layers_dims[l], 1))
+        else:
+            raise ReferenceError('Provide a list of DNN structure, '
+                                 'where each element should describe amount of neurons and it''s index - layer index')
+
+    def __ReLU_init(self, layers_dims):
+        if layers_dims is not None:
+            for l in range(1, self._depth):
+                dim, prev_dim = layers_dims[l], layers_dims[l - 1]
+                #
+                self._parameters['W' + str(l)] = np.random.randn(dim, np.sqrt(prev_dim))
+                self._parameters['b' + str(l)] = np.zeros((dim, 1))
+        else:
+            raise ReferenceError('Provide a list of DNN structure, '
+                                 'where each element should describe amount of neurons and it''s index - layer index')
 
 
     @property
