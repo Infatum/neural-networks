@@ -11,7 +11,7 @@ class Actvitaion_Function(Enum):
 
 class Initialization_Type(Enum):
     Xavier = 1
-    ReLU = 2
+    Xavier_improved = 2
     random = 3
 
 
@@ -37,19 +37,11 @@ class Deep_Neural_Network:
             self.__xavier_init(layers_dims)
 
     def __xavier_init(self, layers_dims):
-        """
-        initialize weights with Xavier initialization for each hidden layer and biases with zeros
-
-        :param layers_dims: -- dimensions structure of the layers for DNN
-        """
         if layers_dims is not None:
             for l in range(1, self._depth):
-                dim, prev_dim = layers_dims[l], layers_dims[l - 1]
-                #
-                self._parameters['W' + str(l)] = np.random.randn(dim, prev_dim) * np.sqrt(1 / prev_dim)
-                self._parameters['b' + str(l)] = np.zeros((dim, 1))
-                assert (self._parameters['W' + str(l)].shape == (layers_dims[l], layers_dims[l - 1]))
-                assert (self._parameters['b' + str(l)].shape == (layers_dims[l], 1))
+                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1] / np.sqrt(
+                    layers_dims[l - 1]))
+                self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
         else:
             raise ReferenceError('Provide a list of DNN structure, '
                                  'where each element should describe amount of neurons and it''s index - layer index')
@@ -58,13 +50,27 @@ class Deep_Neural_Network:
         if layers_dims is not None:
             for l in range(1, self._depth):
                 dim, prev_dim = layers_dims[l], layers_dims[l - 1]
-                #
-                self._parameters['W' + str(l)] = np.random.randn(dim, np.sqrt(prev_dim))
+                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) * np.sqrt(
+                    2 / layers_dims[l - 1] + layers_dims[l])
                 self._parameters['b' + str(l)] = np.zeros((dim, 1))
         else:
             raise ReferenceError('Provide a list of DNN structure, '
                                  'where each element should describe amount of neurons and it''s index - layer index')
 
+    def __xavier_init_improved(self, layers_dims):
+        """
+        initialize weights with improved Xavier initialization for each hidden layer and biases with zeros
+
+        :param layers_dims: -- dimensions structure of the layers for DNN
+        """
+        if layers_dims is not None:
+            for l in range(1, self._depth):
+                dim, prev_dim = layers_dims[l], layers_dims[l - 1]
+                self._parameters['W' + str(l)] = np.sqrt(2 / (layers_dims[l - 1] + layers_dims[l]))
+                self._parameters['b' + str(l)] = np.zeros((dim, 1))
+        else:
+            raise ReferenceError('Provide a list of DNN structure, '
+                                 'where each element should describe amount of neurons and it''s index - layer index')
 
     @property
     def activations(self):
@@ -129,7 +135,7 @@ class Deep_Neural_Network:
         """
         Activation of the i-th layer
 
-        :param previous_activation: -- activations from previous layer (or input data): (size of previous layer, number of examples)
+        :param previous_activation: -- activations from previous layer
         :param layer_indx: -- layer index
         :param activation_type: -- activation function type
         :returns
