@@ -9,12 +9,18 @@ class Actvitaion_Function(Enum):
     TANH = 3
     LReLU = 4
 
+class Initialization_Type(Enum):
+    Xavier = 1
+    ReLU = 2
+    random = 3
+
 
 class Deep_Neural_Network:
 
-    def __init__(self, layers_dims=None, factor=0.01, true_labels=None):
+    def __init__(self, layers_dims=None, factor=0.01, init_type=Initialization_Type.Xavier):
         """
         Initialize the N-Layer Neural Net structure
+
         :param layers_dims: -- layers dimensions, where layers_dims[0] is a feature vector
         :param factor: -- small-scale factor value to reduce initial weights and biases values
         :param true_labels: -- labeled with correct answers data-set for a supervised learning training
@@ -23,21 +29,29 @@ class Deep_Neural_Network:
         self._parameters = {}
         self._activation_cache = []
         self._linear_cache = []
-        # todo: features (cache or not - that's the question'
         self._features = None
 
         L = len(layers_dims)
         self._depth = L - 1
+        if init_type == Initialization_Type.Xavier:
+            self.__xavier_init(layers_dims)
 
+    def __xavier_init(self, layers_dims):
+        """
+        initialize weights with Xavier initialization for each hidden layer and biases with zeros
+
+        :param layers_dims: -- dimensions structure of the layers for DNN
+        :param depth: -- DNN's amount of layers
+        """
         if layers_dims is not None:
-            for l in range(1, L):
-                # initialize weights with random values for each hidden layer
-                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) / np.sqrt(
-            layers_dims[l - 1])
-                # initialize biases with zeros for each hidden layer
-                self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
+            for l in range(1, self._depth):
+                dim, prev_dim = layers_dims[l], layers_dims[l - 1]
+                #
+                self._parameters['W' + str(l)] = np.random.randn(dim, prev_dim) * np.sqrt(1 / prev_dim)
+                self._parameters['b' + str(l)] = np.zeros((dim, 1))
                 assert (self._parameters['W' + str(l)].shape == (layers_dims[l], layers_dims[l - 1]))
                 assert (self._parameters['b' + str(l)].shape == (layers_dims[l], 1))
+
 
     @property
     def activations(self):
