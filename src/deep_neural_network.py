@@ -193,7 +193,7 @@ class Deep_Neural_Network:
         assert (net_output.shape == (1, X.shape[1]))
         return net_output
 
-    def compute_cost(self, net_output, Y):
+    def compute_cost(self, net_output, Y, regularization=True):
         """
         Computes the cost over all training set
 
@@ -310,6 +310,25 @@ class Deep_Neural_Network:
             raise ValueError('Provide a valid activation function type: either ReLU, LReLU, sigmoid or tanh')
         dA_prev, dW, db = self.__derivation(dZ, layer_index)
         return dA_prev, dW, db
+
+    def __compute_cost_with_regularization(self, cross_entropy_cost, lambd):
+        """
+
+        :param net_output:
+        :param Y:
+        :param layer_index:
+        :param lambd:
+        :return:
+        """
+        W, m = self._features, self._depth + 1
+        summ = np.sum(np.sqrt(W))
+
+        for l in range(1, m):
+            W = self._parameters['W' + str(l)]
+            summ += np.sum(np.sqrt(W))
+
+        cost = (summ * lambd / (2 * m)) + cross_entropy_cost
+        return cost
 
     def backward_propagation(self, Y):
         """
