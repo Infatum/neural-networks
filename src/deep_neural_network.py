@@ -15,6 +15,8 @@ class Initialization_Type(Enum):
     ReLU = 3
     random = 4
 
+# todo: Add a child class with different regularizations(L1, L2, droput, data augmentation, orthogonalization etc.)
+# todo: Child class should also contain input normalization
 class Deep_Neural_Network:
 
     def __init__(self, layers_dims=None, init_type=Initialization_Type.Xavier, factor=0.001):
@@ -40,6 +42,7 @@ class Deep_Neural_Network:
         elif init_type == Initialization_Type.ReLU:
             self.__ReLU_init(layers_dims)
 
+    # todo: should be postponed to child class
     def __xavier_init(self, layers_dims):
         """
         initialize weights with improved Xavier initialization for each hidden layer and biases with zeros
@@ -55,6 +58,7 @@ class Deep_Neural_Network:
             raise ReferenceError('Provide a list of DNN structure, '
                                  'where each element should describe amount of neurons and it''s index - layer index')
 
+    # todo: should be postponed to child class
     def __ReLU_init(self, layers_dims):
         if layers_dims is not None:
             for l in range(1, self._depth + 1):
@@ -71,6 +75,7 @@ class Deep_Neural_Network:
                 self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) * factor
                 self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
 
+    # todo: should be postponed to child class
     def __he_init(self, layers_dims):
         np.random.seed(3)
         if layers_dims is not None:
@@ -164,7 +169,7 @@ class Deep_Neural_Network:
             raise ValueError('Provide a valid activation function type: either ReLU, LReLU, sigmoid or tanh')
         return A, Z
 
-    def forward_propagation(self, X):
+    def forward_propagation(self, X, drop_out=False):
         """
         Forward propagation step for overall Neural Net structure
 
@@ -179,7 +184,6 @@ class Deep_Neural_Network:
 
         for l in range(1, self._depth):
             A_prev = A
-            # todo: debug activation mismatch
             A, Z = self.activation(A_prev, l, Actvitaion_Function.ReLU)
             self._activation_cache.append(A)
             self._linear_cache.append(Z)
@@ -240,7 +244,6 @@ class Deep_Neural_Network:
         """
         A = self._activation_cache[layer_index - 1]
         # get previous layer activation values if layer isn't first, either assign prev. activ. to the feature vector
-        # todo: find out what should be an A_prev value for the first layer
         A_prev = self._activation_cache[layer_index - 2] if layer_index > 1 else self._features
         W, b = self._parameters['W' + str(layer_index)], self._parameters['b' + str(layer_index)]
         # amount of neurons in the previous layer
@@ -331,7 +334,7 @@ class Deep_Neural_Network:
         dA_prev, dW, db = self.__derivation(dZ, layer_index)
         return dA_prev, dW, db
 
-    def backward_propagation(self, Y):
+    def backward_propagation(self, Y, regularization=False):
         """
         Backward propagation step for the [LINEAR->RELU] * (L-1) -> LINEAR -> SIGMOID group
 
