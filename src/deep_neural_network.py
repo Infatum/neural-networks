@@ -11,13 +11,13 @@ class Actvitaion_Function(Enum):
 
 class Initialization_Type(Enum):
     Xavier = 1
-    Xavier_improved = 2
-    random = 3
-
+    He = 2
+    ReLU = 3
+    random = 4
 
 class Deep_Neural_Network:
 
-    def __init__(self, layers_dims=None, factor=0.01, init_type=Initialization_Type.Xavier):
+    def __init__(self, layers_dims=None, init_type=Initialization_Type.Xavier, factor=0.001):
         """
         Initialize the N-Layer Neural Net structure
 
@@ -35,10 +35,19 @@ class Deep_Neural_Network:
         self._depth = L - 1
         if init_type == Initialization_Type.Xavier:
             self.__xavier_init(layers_dims)
+        elif init_type == Initialization_Type.He:
+            self.__he_init(layers_dims)
+        elif init_type == Initialization_Type.ReLU:
+            self.__ReLU_init(layers_dims)
 
     def __xavier_init(self, layers_dims):
+        """
+        initialize weights with improved Xavier initialization for each hidden layer and biases with zeros
+
+        :param layers_dims: -- dimensions structure of the layers for DNN
+        """
         if layers_dims is not None:
-            for l in range(1, self._depth):
+            for l in range(1, self._depth + 1):
                 self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1] / np.sqrt(
                     layers_dims[l - 1]))
                 self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
@@ -48,26 +57,27 @@ class Deep_Neural_Network:
 
     def __ReLU_init(self, layers_dims):
         if layers_dims is not None:
-            for l in range(1, self._depth):
-                dim, prev_dim = layers_dims[l], layers_dims[l - 1]
+            for l in range(1, self._depth + 1):
                 self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) * np.sqrt(
-                    2 / layers_dims[l - 1] + layers_dims[l])
-                self._parameters['b' + str(l)] = np.zeros((dim, 1))
+                    2 / (layers_dims[l - 1] + layers_dims[l]))
+                self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
         else:
             raise ReferenceError('Provide a list of DNN structure, '
                                  'where each element should describe amount of neurons and it''s index - layer index')
 
-    def __xavier_init_improved(self, layers_dims):
-        """
-        initialize weights with improved Xavier initialization for each hidden layer and biases with zeros
-
-        :param layers_dims: -- dimensions structure of the layers for DNN
-        """
+    def __random_init(self, layers_dims, factor):
         if layers_dims is not None:
-            for l in range(1, self._depth):
-                dim, prev_dim = layers_dims[l], layers_dims[l - 1]
-                self._parameters['W' + str(l)] = np.sqrt(2 / (layers_dims[l - 1] + layers_dims[l]))
-                self._parameters['b' + str(l)] = np.zeros((dim, 1))
+            for l in range(1, self._depth + 1):
+                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) * factor
+                self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
+
+    def __he_init(self, layers_dims):
+        np.random.seed(3)
+        if layers_dims is not None:
+            for l in range(1, self._depth + 1):
+                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l-1]) * np.sqrt(
+                                                                                            2 / (layers_dims[l - 1]))
+                self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
         else:
             raise ReferenceError('Provide a list of DNN structure, '
                                  'where each element should describe amount of neurons and it''s index - layer index')
@@ -374,7 +384,12 @@ class Deep_Neural_Network:
 
 
 def main():
-    dnn_model = Deep_Neural_Network([3, 2, 1])
+    dnn_model = Deep_Neural_Network([2, 4, 1], Initialization_Type.He)
+    print('W1 = ', dnn_model.parameters['W1'])
+    print('b1 = ', dnn_model.parameters['b1'])
+    print('W2 = ', dnn_model.parameters['W2'])
+    print('b2 = ', dnn_model.parameters['b2'])
+
     depth = dnn_model.depth
     depth = 8
 
