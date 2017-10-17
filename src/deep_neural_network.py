@@ -48,8 +48,8 @@ class Deep_Neural_Network:
         """
         if layers_dims is not None:
             for l in range(1, self._depth + 1):
-                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1] / np.sqrt(
-                    layers_dims[l - 1]))
+                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) / np.sqrt(
+                    layers_dims[l - 1])
                 self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
         else:
             raise ReferenceError('Provide a list of DNN structure, '
@@ -104,7 +104,6 @@ class Deep_Neural_Network:
         :param current_layer_index:
         :returns Z: -- linear function value(WA[l-1] + b[l])
         """
-        # todo: find out why W differs from Coursera's version
         W = self._parameters['W' + str(current_layer_index)]
         b = self._parameters['b' + str(current_layer_index)]
         Z = np.dot(W, A) + b
@@ -152,7 +151,6 @@ class Deep_Neural_Network:
             A: -- post-activation value
             Z: -- linear cache(linear function value)
         """
-        # todo: debug incorrect linear function calculation(Z)
         Z = self.__linear_forward(previous_activation, layer_indx)
         if activation_type == Actvitaion_Function.SIGMOID:
             A = self.sigmoid(Z)
@@ -193,7 +191,7 @@ class Deep_Neural_Network:
         assert (net_output.shape == (1, X.shape[1]))
         return net_output
 
-    def compute_cost(self, net_output, Y, regularization=True):
+    def compute_cost(self, net_output, Y, regularization=False):
         """
         Computes the cost over all training set
 
@@ -205,6 +203,28 @@ class Deep_Neural_Network:
         m = Y.shape[1]
         cost = (1. / m) * (-np.dot(Y, np.log(net_output).T) - np.dot(1 - Y, np.log(1 - net_output).T))
         cost = np.squeeze(cost)
+
+        if regularization:
+            cost = self.__compute_cost_with_regularization(cost, 0.1)
+        return cost
+
+    def __compute_cost_with_regularization(self, cross_entropy_cost, lambd):
+        """
+
+        :param net_output:
+        :param Y:
+        :param layer_index:
+        :param lambd:
+        :return:
+        """
+        W, m = self._features, self._depth + 1
+        summ = np.sum(np.square(W))
+
+        for l in range(1, m):
+            W = self._parameters['W' + str(l)]
+            summ += np.sum(np.square(W))
+
+        cost = (summ * lambd / (2 * m)) + cross_entropy_cost
         return cost
 
     def __derivation(self, dZ, layer_index):
@@ -310,25 +330,6 @@ class Deep_Neural_Network:
             raise ValueError('Provide a valid activation function type: either ReLU, LReLU, sigmoid or tanh')
         dA_prev, dW, db = self.__derivation(dZ, layer_index)
         return dA_prev, dW, db
-
-    def __compute_cost_with_regularization(self, cross_entropy_cost, lambd):
-        """
-
-        :param net_output:
-        :param Y:
-        :param layer_index:
-        :param lambd:
-        :return:
-        """
-        W, m = self._features, self._depth + 1
-        summ = np.sum(np.sqrt(W))
-
-        for l in range(1, m):
-            W = self._parameters['W' + str(l)]
-            summ += np.sum(np.sqrt(W))
-
-        cost = (summ * lambd / (2 * m)) + cross_entropy_cost
-        return cost
 
     def backward_propagation(self, Y):
         """
