@@ -1,6 +1,6 @@
 import time
 import data_resolver
-import deep_neural_network as DNN
+import base_neural_network as DNN
 from enum import Enum
 import matplotlib.pyplot as plt
 import numpy as np
@@ -37,7 +37,7 @@ class Binary_Classifier:
         model = None
         if model_type == Model_Type.DNN:
             if layers_dims != 0 and len(layers_dims) > 0:
-                model = DNN.Deep_Neural_Network(layers_dims)
+                model = DNN.Base_Neural_Network(layers_dims)
             else:
                 raise ValueError('Please, provide a list with layers dimensions')
         else:
@@ -86,4 +86,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

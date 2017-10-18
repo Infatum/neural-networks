@@ -1,25 +1,13 @@
 import numpy as np
-from enum import Enum
-import test_cases as ts_cs
+from dnn_types import Actvitaion_Function
+from dnn_types import Initialization_Type
 
-
-class Actvitaion_Function(Enum):
-    SIGMOID = 1
-    ReLU = 2
-    TANH = 3
-    LReLU = 4
-
-class Initialization_Type(Enum):
-    Xavier = 1
-    He = 2
-    ReLU = 3
-    random = 4
 
 # todo: Add a child class with different regularizations(L1, L2, droput, data augmentation, orthogonalization etc.)
 # todo: Child class should also contain input normalization
-class Deep_Neural_Network:
+class Base_Neural_Network:
 
-    def __init__(self, layers_dims=None, init_type=Initialization_Type.Xavier, factor=0.001):
+    def __init__(self, layers_dims, init_type=Initialization_Type.random, factor=0.001):
         """
         Initialize the N-Layer Neural Net structure
 
@@ -35,57 +23,16 @@ class Deep_Neural_Network:
 
         L = len(layers_dims)
         self._depth = L - 1
-        if init_type == Initialization_Type.Xavier:
-            self.__xavier_init(layers_dims)
-        elif init_type == Initialization_Type.He:
-            self.__he_init(layers_dims)
-        elif init_type == Initialization_Type.ReLU:
-            self.__ReLU_init(layers_dims)
+        self._initialize_network(layers_dims, init_type, factor)
 
-    # todo: should be postponed to child class
-    def __xavier_init(self, layers_dims):
-        """
-        initialize weights with improved Xavier initialization for each hidden layer and biases with zeros
-
-        :param layers_dims: -- dimensions structure of the layers for DNN
-        """
-        if layers_dims is not None:
-            for l in range(1, self._depth + 1):
-                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) / np.sqrt(
-                    layers_dims[l - 1])
-                self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
-        else:
-            raise ReferenceError('Provide a list of DNN structure, '
-                                 'where each element should describe amount of neurons and it''s index - layer index')
-
-    # todo: should be postponed to child class
-    def __ReLU_init(self, layers_dims):
-        if layers_dims is not None:
-            for l in range(1, self._depth + 1):
-                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) * np.sqrt(
-                    2 / (layers_dims[l - 1] + layers_dims[l]))
-                self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
-        else:
-            raise ReferenceError('Provide a list of DNN structure, '
-                                 'where each element should describe amount of neurons and it''s index - layer index')
-
-    def __random_init(self, layers_dims, factor):
-        if layers_dims is not None:
+    def _initialize_network(self, layers_dims, init_type, factor):
+        print('Base Neural Network init')
+        if layers_dims is not None and init_type == Initialization_Type.random:
             for l in range(1, self._depth + 1):
                 self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) * factor
                 self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
-
-    # todo: should be postponed to child class
-    def __he_init(self, layers_dims):
-        np.random.seed(3)
-        if layers_dims is not None:
-            for l in range(1, self._depth + 1):
-                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l-1]) * np.sqrt(
-                                                                                            2 / (layers_dims[l - 1]))
-                self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
         else:
-            raise ReferenceError('Provide a list of DNN structure, '
-                                 'where each element should describe amount of neurons and it''s index - layer index')
+            raise NotImplemented('Other init types haven'' been implemented')
 
     @property
     def activations(self):
@@ -169,7 +116,7 @@ class Deep_Neural_Network:
             raise ValueError('Provide a valid activation function type: either ReLU, LReLU, sigmoid or tanh')
         return A, Z
 
-    def forward_propagation(self, X, drop_out=False):
+    def forward_propagation(self, X):
         """
         Forward propagation step for overall Neural Net structure
 
@@ -210,25 +157,6 @@ class Deep_Neural_Network:
 
         if regularization:
             cost = self.__compute_cost_with_regularization(cost, 0.1)
-        return cost
-
-    def __compute_cost_with_regularization(self, cross_entropy_cost, lambd):
-        """
-
-        :param net_output:
-        :param Y:
-        :param layer_index:
-        :param lambd:
-        :return:
-        """
-        W, m = self._features, self._depth + 1
-        summ = np.sum(np.square(W))
-
-        for l in range(1, m):
-            W = self._parameters['W' + str(l)]
-            summ += np.sum(np.square(W))
-
-        cost = (summ * lambd / (2 * m)) + cross_entropy_cost
         return cost
 
     def __derivation(self, dZ, layer_index):
@@ -334,7 +262,7 @@ class Deep_Neural_Network:
         dA_prev, dW, db = self.__derivation(dZ, layer_index)
         return dA_prev, dW, db
 
-    def backward_propagation(self, Y, regularization=False):
+    def backward_propagation(self, Y):
         """
         Backward propagation step for the [LINEAR->RELU] * (L-1) -> LINEAR -> SIGMOID group
 
@@ -404,17 +332,3 @@ class Deep_Neural_Network:
                 predictions[0, i] = 0
         accuracy = np.sum((predictions == labels) / m)
         return predictions, accuracy
-
-
-def main():
-    dnn_model = Deep_Neural_Network([2, 4, 1], Initialization_Type.He)
-    print('W1 = ', dnn_model.parameters['W1'])
-    print('b1 = ', dnn_model.parameters['b1'])
-    print('W2 = ', dnn_model.parameters['W2'])
-    print('b2 = ', dnn_model.parameters['b2'])
-
-    depth = dnn_model.depth
-    depth = 8
-
-if __name__ == '__main__':
-    main()

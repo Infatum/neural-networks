@@ -32,8 +32,3 @@ class Data_Resolver:
         train_img_std = train_img_data / 255
         test_img_std = test_img_data / 255
         return train_img_std, test_img_std
-
-
-
-
-
