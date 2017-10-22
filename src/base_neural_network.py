@@ -125,7 +125,6 @@ class Base_Neural_Network:
             net_output: -- activation of the last(output) layer
             Z: -- linear cache for each layer
         """
-        cache = []
         A = X
         self._features = X
 
@@ -142,7 +141,7 @@ class Base_Neural_Network:
         assert (net_output.shape == (1, X.shape[1]))
         return net_output
 
-    def compute_cost(self, net_output, Y, regularization=False):
+    def compute_cost(self, net_output, Y):
         """
         Computes the cost over all training set
 
@@ -155,8 +154,6 @@ class Base_Neural_Network:
         cost = (1. / m) * (-np.dot(Y, np.log(net_output).T) - np.dot(1 - Y, np.log(1 - net_output).T))
         cost = np.squeeze(cost)
 
-        if regularization:
-            cost = self.__compute_cost_with_regularization(cost, 0.1)
         return cost
 
     def __derivation(self, dZ, layer_index):
