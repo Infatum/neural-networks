@@ -11,7 +11,7 @@ class Deep_Neural_Network(Base_Neural_Network):
                  initialization_type=Initialization_Type.He, factor=0.075):
         super(Deep_Neural_Network, self).__init__(layers_dims, initialization_type, factor)
         self._regularization = regularization_type
-        self._kept_units = {}
+        self._drop_out_mask = {}
 
         if regularization_type == Regularization.droput:
             if keep_probabilities is not None:
@@ -86,17 +86,19 @@ class Deep_Neural_Network(Base_Neural_Network):
                 A = np.multiply(A, D)
                 A /= self._keep_probabilities[l - 1]
                 self._activation_cache.append(A)
+                self._drop_out_mask['D' + str(l)] = D
                 # kept neurons after using drop out
             net_output, Z = self.activation(A, self._depth, Actvitaion_Function.SIGMOID)
             self._activation_cache.append(net_output, Z)
             assert (net_output.shape == (1, X.shape[1]))
             return net_output
+        else:
+            return super(Deep_Neural_Network, self).forward_propagation(X)
 
     def __forward_prop_with_dropout(self, current_activation, activation_index):
         droped_out = np.random.randn(current_activation.shape[0], current_activation.shape[1])
         droped_out = droped_out < self._keep_probabilities[activation_index]
         return droped_out
-
 
     def compute_cost(self, net_output, Y, lambd=0.5):
         if self._regularization == Regularization.L1:
@@ -133,24 +135,43 @@ class Deep_Neural_Network(Base_Neural_Network):
         elif self._regularization == Regularization.L1:
             raise NotImplemented('Not implemented yet')
         elif self._regularization == Regularization.droput:
-            # todo: implement droput
-            raise NotImplemented('Not implemented yet')
+            grads = self.__back_prop_with_drop_out()
         else:
-            return Base_Neural_Network.backward_propagation(Y)
+            grads = super(Deep_Neural_Network, self).backward_propagation(Y)
+
+        return grads
+
+    def __back_prop_with_drop_out(self, Y):
+        m = self._features.shape[1]
+        grads = {}
+        dZ = self._activation_cache[self._depth - 1] - Y
+        A_prev = self._activation_cache[self._depth - 2]
+        grads['dW' + str(self._depth)] = 1./m * np.dot(dZ, A_prev.T)
+        grads['db' + str(self._depth)] = 1./m * np.sum(dZ, axis=1, keepdims=True)
+        W, b = self._parameters['W' + str(self._depth)], self._parameters['b' + str(self._depth)]
+
+        for l in reversed(range(self._depth - 1)):
+            A = self._activation_cache[l - 1]
+            dA = np.multiply(W.T, dZ)
+            dA = np.multiply(dA, self._drop_out_mask['D' + str(l)])
+            dA /= self._keep_probabilities[l - 1]
+            dZ = np.multiply(dA, np.int64(A > 0))
+
+        return grads
 
     def __back_prop_with_regularization(self, Y, lamdb):
         iters, m = self._depth - 1, self._features.shape[1]
-        A_L = self._activation_cache[self._depth - 1]
-        dZ_l = A_L - Y
+        A = self._activation_cache[self._depth - 1]
+        dZ = A - Y
         grads = {}
 
         for l in reversed(range(iters)):
-            A_prev, A_l = self._activation_cache[l - 1], self._activation_cache[l]
-            W_l, b_l = self._parameters['W' + str(l)], self._parameters['b' + str(l)]
-            grads['dW' + str(l)] = 1./m * np.dot(dZ_l, A_prev.T) + np.dot(lamdb / m, W_l)
-            grads['db' + str(l)] = 1./m * np.sum(dZ_l, axis=1, keepdims=True)
-            dA_l = np.dot(W_l, dZ_l)
-            dZ_l = np.multiply(dA_l, np.int64(A_l > 0))
+            A_prev, A = self._activation_cache[l - 1], self._activation_cache[l]
+            W, b = self._parameters['W' + str(l)], self._parameters['b' + str(l)]
+            grads['dW' + str(l)] = 1./m * np.dot(dZ, A_prev.T) + np.dot(lamdb / m, W)
+            grads['db' + str(l)] = 1./m * np.sum(dZ, axis=1, keepdims=True)
+            dA = np.dot(W, dZ)
+            dZ = np.multiply(dA, np.int64(A > 0))
 
         return grads
 

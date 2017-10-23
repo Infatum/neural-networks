@@ -232,7 +232,7 @@ class Base_Neural_Network:
         dZ[Z <= 0] *= 0.001
         return dZ
 
-    def __gradient_descent(self, dA, layer_index, activation_type):
+    def _gradient_descent(self, dA, layer_index, activation_type):
         """
         Gradient descent step for a backward propagation step
 
@@ -277,14 +277,14 @@ class Base_Neural_Network:
         dA = -Y / A + (1 - Y) / (1 - A)
 
         act_type = Actvitaion_Function.SIGMOID
-        grads['dA' + str(l)], grads['dW' + str(l)], grads['db' + str(l)] = self.__gradient_descent(dA, l, act_type)
+        grads['dA' + str(l)], grads['dW' + str(l)], grads['db' + str(l)] = self._gradient_descent(dA, l, act_type)
         dA_prev = grads['dA' + str(l)]
 
         for l in reversed(range(iters)):
             layer = l + 1
-            dA_prev_tmp, dW_tmp, db_tmp = self.__gradient_descent(dA_prev,
-                                                                  layer,
-                                                                  activation_type=Actvitaion_Function.ReLU)
+            dA_prev_tmp, dW_tmp, db_tmp = self._gradient_descent(dA_prev,
+                                                                 layer,
+                                                                 activation_type=Actvitaion_Function.ReLU)
             grads['dA' + str(layer)], grads['dW' + str(layer)], grads['db' + str(layer)] = dA_prev_tmp, dW_tmp, db_tmp
             dA_prev = dA_prev_tmp
 
