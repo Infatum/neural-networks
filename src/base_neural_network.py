@@ -2,9 +2,6 @@ import numpy as np
 from dnn_types import Actvitaion_Function
 from dnn_types import Initialization_Type
 
-
-# todo: Add a child class with different regularizations(L1, L2, droput, data augmentation, orthogonalization etc.)
-# todo: Child class should also contain input normalization
 class Base_Neural_Network:
 
     def __init__(self, layers_dims, init_type=Initialization_Type.random, factor=0.001):
