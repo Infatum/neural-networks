@@ -2,6 +2,7 @@ import numpy as np
 from dnn_types import Actvitaion_Function
 from dnn_types import Initialization_Type
 
+
 class Base_Neural_Network:
 
     def __init__(self, layers_dims, init_type=Initialization_Type.random, factor=0.001):

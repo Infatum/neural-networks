@@ -1,17 +1,24 @@
-from base_neural_network import Base_Neural_Network
+import math
 import numpy as np
+from dnn_types import Data_Type
+from  dnn_types import Learning
 from dnn_types import Initialization_Type
-from dnn_types import  Actvitaion_Function
+from dnn_types import Actvitaion_Function
+from base_neural_network import Base_Neural_Network
 from regularization_techniques import Regularization
 
-
+# todo: this -> add auto-doc to class methods and constructor
 class Deep_Neural_Network(Base_Neural_Network):
 
-    def __init__(self, layers_dims, regularization_type=Regularization.not_required, keep_probabilities=None,
+    def __init__(self, layers_dims, mini_batch_size=64, learning_type=Learning.Supervised,
+                 regularization_type=Regularization.not_required, keep_probabilities=None,
                  initialization_type=Initialization_Type.He, factor=0.075):
+        # init DNN weights and biases
         super(Deep_Neural_Network, self).__init__(layers_dims, initialization_type, factor)
         self._regularization = regularization_type
         self._drop_out_mask = {}
+        self._mini_batch_size = mini_batch_size
+        self._learning_type = learning_type
 
         if regularization_type == Regularization.droput:
             if keep_probabilities is not None:
@@ -73,6 +80,28 @@ class Deep_Neural_Network(Base_Neural_Network):
             raise ReferenceError('Provide a list of DNN structure, '
                                      'where each element should describe amount of neurons and it''s index - layer index')
 
+    def _prepare_mini_batches(self, features, labels):
+        if self._learning_type == Learning.Supervised:
+            m = features.shape[1]
+            mini_batches = []
+            permutation = list(np.random.permutation(m))
+            shuffled_f, shuffled_l = features[:, permutation], labels[:, permutation]
+            number_of_complete_minibatches = math.floor(m / self._mini_batch_size)
+            for i in range(0, number_of_complete_minibatches):
+                mini_batch_X = shuffled_f[:, i * self._mini_batch_size: (i + 1) * self._mini_batch_size]
+                mini_batch_Y = shuffled_l[:, i * self._mini_batch_size: (i + 1) * self._mini_batch_size]
+                mini_batch = (mini_batch_X, mini_batch_Y)
+                mini_batches.append(mini_batch)
+
+            if m % self._mini_batch_size != 0:
+                mini_batch_X = shuffled_f[:, number_of_complete_minibatches * self._mini_batch_size:]
+                mini_batch_Y = shuffled_l[:, number_of_complete_minibatches * self._mini_batch_size:]
+                mini_batch = (mini_batch_X, mini_batch_Y)
+                mini_batches.append(mini_batch)
+        else:
+            raise NotImplementedError('Not implemented yet')
+        return mini_batches
+
     def forward_propagation(self, X):
         if self._regularization == Regularization.droput:
             self._features = X
@@ -82,7 +111,7 @@ class Deep_Neural_Network(Base_Neural_Network):
                 A_previous = A
                 A, Z = super(Deep_Neural_Network, self).activation(A_previous, l, Actvitaion_Function.ReLU)
                 self._linear_cache.append(Z)
-                D = self.__forward_prop_with_dropout(A, l - 1)
+                D = self.__forward_drop_out(A, l - 1)
                 A = np.multiply(A, D)
                 A /= self._keep_probabilities[l - 1]
                 self._activation_cache.append(A)
@@ -95,7 +124,7 @@ class Deep_Neural_Network(Base_Neural_Network):
         else:
             return super(Deep_Neural_Network, self).forward_propagation(X)
 
-    def __forward_prop_with_dropout(self, current_activation, activation_index):
+    def __forward_drop_out(self, current_activation, activation_index):
         droped_out = np.random.randn(current_activation.shape[0], current_activation.shape[1])
         droped_out = droped_out < self._keep_probabilities[activation_index]
         return droped_out
@@ -135,13 +164,13 @@ class Deep_Neural_Network(Base_Neural_Network):
         elif self._regularization == Regularization.L1:
             raise NotImplemented('Not implemented yet')
         elif self._regularization == Regularization.droput:
-            grads = self.__back_prop_with_drop_out()
+            grads = self.__backward_drop_out()
         else:
             grads = super(Deep_Neural_Network, self).backward_propagation(Y)
 
         return grads
 
-    def __back_prop_with_drop_out(self, Y):
+    def __backward_drop_out(self, Y):
         m = self._features.shape[1]
         grads = {}
         dZ = self._activation_cache[self._depth - 1] - Y
