@@ -80,13 +80,15 @@ class Deep_Neural_Network(Base_Neural_Network):
             raise ReferenceError('Provide a list of DNN structure, '
                                      'where each element should describe amount of neurons and it''s index - layer index')
 
-    def _prepare_mini_batches(self, features, labels):
+    def _prepare_mini_batches(self, features, labels=None, learning_type=Learning.Supervised):
+        mini_batches = []
+
         if self._learning_type == Learning.Supervised:
             m = features.shape[1]
-            mini_batches = []
             permutation = list(np.random.permutation(m))
             shuffled_f, shuffled_l = features[:, permutation], labels[:, permutation]
             number_of_complete_minibatches = math.floor(m / self._mini_batch_size)
+
             for i in range(0, number_of_complete_minibatches):
                 mini_batch_X = shuffled_f[:, i * self._mini_batch_size: (i + 1) * self._mini_batch_size]
                 mini_batch_Y = shuffled_l[:, i * self._mini_batch_size: (i + 1) * self._mini_batch_size]
@@ -98,8 +100,22 @@ class Deep_Neural_Network(Base_Neural_Network):
                 mini_batch_Y = shuffled_l[:, number_of_complete_minibatches * self._mini_batch_size:]
                 mini_batch = (mini_batch_X, mini_batch_Y)
                 mini_batches.append(mini_batch)
+
+        elif self._learning_type == Learning.Unsupervised:
+            m = features.shape[0]
+            permutation = list(np.random.permutation(m))
+            shuffled_f = features[:, permutation]
+            number_of_complete_minibatches = math.floor(m / self._mini_batch_size)
+
+            for i in range(0, number_of_complete_minibatches):
+                mini_batch = shuffled_f[:, i * self._mini_batch_size: (i + 1) * self._mini_batch_size]
+                mini_batches.append(mini_batch)
+
+            if m % self._mini_batch_size != 0:
+                mini_batch = shuffled_f[:, number_of_complete_minibatches * self._mini_batch_size:]
+                mini_batches.append(mini_batch)
         else:
-            raise NotImplementedError('Not implemented yet')
+            raise NotImplementedError('Haven''t implemented mini batch preparation for reinforcement learning yet')
         return mini_batches
 
     def forward_propagation(self, X):
