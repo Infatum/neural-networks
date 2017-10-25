@@ -118,6 +118,15 @@ class Deep_Neural_Network(Base_Neural_Network):
             raise NotImplementedError('Haven''t implemented mini batch preparation for reinforcement learning yet')
         return mini_batches
 
+    def __init_velocity(self):
+        v = {}
+
+        for l in range(self._depth):
+            dW_shape, db_shape = self._parameters['W' + str(l + 1)].shape, self._parameters['b' + str(l + 1)].shape
+            v['dW' + str(l + 1)] = np.zeros((dW_shape[0], dW_shape[1]))
+            v['db' + str(l + 1)] = np.zeros((db_shape[0], db_shape[1]))
+        return v
+
     def forward_propagation(self, X):
         if self._regularization == Regularization.droput:
             self._features = X
@@ -220,6 +229,15 @@ class Deep_Neural_Network(Base_Neural_Network):
 
         return grads
 
+    def update_parameters(self, grads, learning_rate, v, beta=0.9):
+        for l in range(1, self._depth + 1):
+            W, b,  = self._parameters['W' + str(l)], self._parameters['b' + str(l)]
+            dW, db = grads['dW' + str(l)], grads['db' + str(l)]
+            v['dW' + str(l + 1)] = beta * v['dW' + str(l)] + (1 - beta) * grads['dW' + str(l)]
+            v['db' + str(l + 1)] = beta * v['db' + str(l)] + (1 - beta) * grads['db' + str(l)]
+            self._parameters['W' + str(l)] = W - learning_rate * v['dW' + str(l)]
+            self._parameters['b' + str(l)] = W - learning_rate * v['db' + str(l)]
+        return v
 
 def main():
     dnn_model = Deep_Neural_Network((4, 5, 3, 1), initialization_type=Initialization_Type.He)
