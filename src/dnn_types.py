@@ -24,3 +24,10 @@ class Learning(Enum):
     Supervised = 1
     Unsupervised = 2
     Reinforcment_Learning = 3
+
+
+class Optimization_Type(Enum):
+    Only_mini_batch = 1
+    Momentum = 2
+    RMSProp = 3
+    Adam = 4

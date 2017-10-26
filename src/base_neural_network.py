@@ -290,7 +290,7 @@ class Base_Neural_Network:
         self._linear_cache.clear()
         return grads
 
-    def update_parameters(self, grads, learning_rate):
+    def update_parameters_with_momentum(self, grads, learning_rate):
         """
         Update parameters using gradient descent
 

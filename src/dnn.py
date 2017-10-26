@@ -1,16 +1,17 @@
 import math
 import numpy as np
 from dnn_types import Data_Type
-from  dnn_types import Learning
+from  dnn_types import Optimization_Type
 from dnn_types import Initialization_Type
 from dnn_types import Actvitaion_Function
 from base_neural_network import Base_Neural_Network
 from regularization_techniques import Regularization
 
+
 # todo: this -> add auto-doc to class methods and constructor
 class Deep_Neural_Network(Base_Neural_Network):
 
-    def __init__(self, layers_dims, mini_batch_size=64, learning_type=Learning.Supervised,
+    def __init__(self, layers_dims, mini_batch_size=64, optimization=Optimization_Type.Adam,
                  regularization_type=Regularization.not_required, keep_probabilities=None,
                  initialization_type=Initialization_Type.He, factor=0.075):
         # init DNN weights and biases
@@ -18,7 +19,7 @@ class Deep_Neural_Network(Base_Neural_Network):
         self._regularization = regularization_type
         self._drop_out_mask = {}
         self._mini_batch_size = mini_batch_size
-        self._learning_type = learning_type
+        self._optimization_type = optimization
 
         if regularization_type == Regularization.droput:
             if keep_probabilities is not None:
@@ -80,52 +81,25 @@ class Deep_Neural_Network(Base_Neural_Network):
             raise ReferenceError('Provide a list of DNN structure, '
                                      'where each element should describe amount of neurons and it''s index - layer index')
 
-    def _prepare_mini_batches(self, features, labels=None, learning_type=Learning.Supervised):
+    def _prepare_mini_batches(self, features, labels):
         mini_batches = []
+        m = features.shape[1]
+        permutation = list(np.random.permutation(m))
+        shuffled_f, shuffled_l = features[:, permutation], labels[:, permutation]
+        number_of_complete_minibatches = math.floor(m / self._mini_batch_size)
 
-        if self._learning_type == Learning.Supervised:
-            m = features.shape[1]
-            permutation = list(np.random.permutation(m))
-            shuffled_f, shuffled_l = features[:, permutation], labels[:, permutation]
-            number_of_complete_minibatches = math.floor(m / self._mini_batch_size)
+        for i in range(0, number_of_complete_minibatches):
+            mini_batch_X = shuffled_f[:, i * self._mini_batch_size: (i + 1) * self._mini_batch_size]
+            mini_batch_Y = shuffled_l[:, i * self._mini_batch_size: (i + 1) * self._mini_batch_size]
+            mini_batch = (mini_batch_X, mini_batch_Y)
+            mini_batches.append(mini_batch)
 
-            for i in range(0, number_of_complete_minibatches):
-                mini_batch_X = shuffled_f[:, i * self._mini_batch_size: (i + 1) * self._mini_batch_size]
-                mini_batch_Y = shuffled_l[:, i * self._mini_batch_size: (i + 1) * self._mini_batch_size]
-                mini_batch = (mini_batch_X, mini_batch_Y)
-                mini_batches.append(mini_batch)
-
-            if m % self._mini_batch_size != 0:
-                mini_batch_X = shuffled_f[:, number_of_complete_minibatches * self._mini_batch_size:]
-                mini_batch_Y = shuffled_l[:, number_of_complete_minibatches * self._mini_batch_size:]
-                mini_batch = (mini_batch_X, mini_batch_Y)
-                mini_batches.append(mini_batch)
-
-        elif self._learning_type == Learning.Unsupervised:
-            m = features.shape[0]
-            permutation = list(np.random.permutation(m))
-            shuffled_f = features[:, permutation]
-            number_of_complete_minibatches = math.floor(m / self._mini_batch_size)
-
-            for i in range(0, number_of_complete_minibatches):
-                mini_batch = shuffled_f[:, i * self._mini_batch_size: (i + 1) * self._mini_batch_size]
-                mini_batches.append(mini_batch)
-
-            if m % self._mini_batch_size != 0:
-                mini_batch = shuffled_f[:, number_of_complete_minibatches * self._mini_batch_size:]
-                mini_batches.append(mini_batch)
-        else:
-            raise NotImplementedError('Haven''t implemented mini batch preparation for reinforcement learning yet')
+        if m % self._mini_batch_size != 0:
+            mini_batch_X = shuffled_f[:, number_of_complete_minibatches * self._mini_batch_size:]
+            mini_batch_Y = shuffled_l[:, number_of_complete_minibatches * self._mini_batch_size:]
+            mini_batch = (mini_batch_X, mini_batch_Y)
+            mini_batches.append(mini_batch)
         return mini_batches
-
-    def __init_velocity(self):
-        v = {}
-
-        for l in range(self._depth):
-            dW_shape, db_shape = self._parameters['W' + str(l + 1)].shape, self._parameters['b' + str(l + 1)].shape
-            v['dW' + str(l + 1)] = np.zeros((dW_shape[0], dW_shape[1]))
-            v['db' + str(l + 1)] = np.zeros((db_shape[0], db_shape[1]))
-        return v
 
     def forward_propagation(self, X):
         if self._regularization == Regularization.droput:
@@ -213,6 +187,7 @@ class Deep_Neural_Network(Base_Neural_Network):
 
         return grads
 
+    # todo: rewrite to a single call instead of loop
     def __back_prop_with_regularization(self, Y, lamdb):
         iters, m = self._depth - 1, self._features.shape[1]
         A = self._activation_cache[self._depth - 1]
@@ -229,15 +204,59 @@ class Deep_Neural_Network(Base_Neural_Network):
 
         return grads
 
-    def update_parameters(self, grads, learning_rate, v, beta=0.9):
-        for l in range(1, self._depth + 1):
-            W, b,  = self._parameters['W' + str(l)], self._parameters['b' + str(l)]
-            dW, db = grads['dW' + str(l)], grads['db' + str(l)]
-            v['dW' + str(l + 1)] = beta * v['dW' + str(l)] + (1 - beta) * grads['dW' + str(l)]
-            v['db' + str(l + 1)] = beta * v['db' + str(l)] + (1 - beta) * grads['db' + str(l)]
-            self._parameters['W' + str(l)] = W - learning_rate * v['dW' + str(l)]
-            self._parameters['b' + str(l)] = W - learning_rate * v['db' + str(l)]
+    def __init_velocity(self):
+        v = {}
+
+        for l in range(self._depth):
+            dW_shape, db_shape = self._parameters['W' + str(l + 1)].shape, self._parameters['b' + str(l + 1)].shape
+            v['dW' + str(l + 1)] = np.zeros((dW_shape[0], dW_shape[1]))
+            v['db' + str(l + 1)] = np.zeros((db_shape[0], db_shape[1]))
         return v
+
+    def _update_parameters_with_momentum(self, grads, layer, learning_rate, v, beta=0.9):
+        """
+        Computes velocity with respect to gradients for gradient descent with momentum optimization
+
+        :param grads: -- weights and biases gradients
+        :param learning_rate: --
+        :param v:
+        :param beta:
+        :return:
+        """
+        W, b,  = self._parameters['W' + str(layer)], self._parameters['b' + str(layer)]
+        dW, db = grads['dW' + str(layer)], grads['db' + str(layer)]
+        v_dW = beta * v['dW' + str(layer)] + (1 - beta) * grads['dW' + str(layer)]
+        v_db = beta * v['db' + str(layer)] + (1 - beta) * grads['db' + str(layer)]
+        W, b = self._parameters['W' + str(layer)], self._parameters['b' + str(layer)]
+        self._parameters['W' + str(layer)] = W - learning_rate * v_dW
+        self._parameters['W' + str(layer)] = b - learning_rate * v_db
+
+    def __initialize_adam(self):
+        v, s = {}, {}
+
+        for l in range(1, self._depth + 1):
+            v['dW' + str(l)] = np.zeros(self._parameters['W'].shape)
+            v['db' + str(l)] = np.zeros(self._parameters['b'].shape)
+            s['dW' + str(l)] = np.zeros(self._parameters['W'].shape)
+            s['db' + str(l)] = np.zeros(self._parameters['b'].shape)
+        return v, s
+
+    def _update_parameters_with_adam(self, grads, layer, learning_rate, v, s, t, beta1 = 0.9,
+                                     beta2=0.999, epsilon = 1e-8):
+        v_dW, v_db = v
+        s_dW, s_db = s
+        dW, db = grads
+
+        v_dW, v_db = beta1 * v_dW + (1 - beta1) * dW, beta1 * v_db + (1 - beta1) * db
+        v_dW_corrected, v_db_corrected = v_dW / (1 - np.power(beta1, t)), v_db / (1 - np.power(beta1, t))
+
+        s_dW, s_db = beta2 * s_dW + (1 - beta2) * np.square(dW), beta2 * s_db + (1 - beta2) * np.square(db),
+        s_dW_corrected, s_db_corrected = s_dW / (1 - np.power(beta2, t)), s_db / (1 - np.power(beta2, t))
+
+        W, b = self._parameters['W' + str(layer)], self._parameters['b' + str(layer)]
+        self._parameters['W' + str(layer)] = W - learning_rate * v_dW_corrected / (np.sqrt(s_dW_corrected) + epsilon)
+        self._parameters['b' + str(layer)] = b - learning_rate * v_db_corrected / (np.sqrt(s_db_corrected) + epsilon)
+
 
 def main():
     dnn_model = Deep_Neural_Network((4, 5, 3, 1), initialization_type=Initialization_Type.He)

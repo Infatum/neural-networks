@@ -49,7 +49,7 @@ class Binary_Classifier:
             model_output = self._model.forward_propagation(data_manager.train_image_data)
             cost = self._model.compute_cost(model_output, data_manager.train_label_data)
             grads = self._model.backward_propagation(data_manager.train_label_data)
-            self._model.update_parameters(grads, self._learning_rate)
+            self._model.update_parameters_with_momentum(grads, self._learning_rate)
 
             # Print the cost every 100 training example
             if self._print_cost and i % 100 == 0:
