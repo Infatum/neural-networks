@@ -2,10 +2,10 @@ import numpy as np
 from dnn_types import Actvitaion_Function
 from dnn_types import Initialization_Type
 
-
+# todo: add layers activation functions to be set during net init
 class Base_Neural_Network:
 
-    def __init__(self, layers_dims, init_type=Initialization_Type.random, factor=0.001):
+    def __init__(self, layers_dims, layers_activations, init_type=Initialization_Type.random, factor=0.001):
         """
         Initialize the N-Layer Neural Net structure
 
@@ -18,19 +18,19 @@ class Base_Neural_Network:
         self._activation_cache = []
         self._linear_cache = []
         self._features = None
+        self._layers_activations = {}
 
         L = len(layers_dims)
         self._depth = L - 1
-        self._initialize_network(layers_dims, init_type, factor)
+        if init_type == Initialization_Type.random:
+            self._initialize_network(layers_dims, layers_activations, factor)
 
-    def _initialize_network(self, layers_dims, init_type, factor):
+    def _initialize_network(self, layers_dims, layers_activation_functions, factor):
         print('Base Neural Network init')
-        if layers_dims is not None and init_type == Initialization_Type.random:
-            for l in range(1, self._depth + 1):
-                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) * factor
-                self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
-        else:
-            raise NotImplemented('Other init types haven'' been implemented')
+        for l in range(1, self._depth + 1):
+            self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) * factor
+            self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
+            self._layers_activations[str(l)] = layers_activation_functions[layers_activation_functions - 1]
 
     @property
     def activations(self):
@@ -128,11 +128,11 @@ class Base_Neural_Network:
 
         for l in range(1, self._depth):
             A_prev = A
-            A, Z = self.activation(A_prev, l, Actvitaion_Function.ReLU)
+            A, Z = self.activation(A_prev, l, self._layers_activations[l])
             self._activation_cache.append(A)
             self._linear_cache.append(Z)
 
-        net_output, Z = self.activation(A, self._depth, Actvitaion_Function.SIGMOID)
+        net_output, Z = self.activation(A, self._depth, self._layers_activations[self._depth])
         self._activation_cache.append(net_output)
         self._linear_cache.append(Z)
 
@@ -172,8 +172,8 @@ class Base_Neural_Network:
         # amount of neurons in the previous layer
         m = A_prev.shape[1]
 
-        dW = np.dot(1 / m, np.dot(dZ, A_prev.T))
-        db = np.dot(1 / m, np.sum(dZ, axis=1, keepdims=True))
+        dW = np.dot(1. / m, np.dot(dZ, A_prev.T))
+        db = np.dot(1. / m, np.sum(dZ, axis=1, keepdims=True))
         dA_prev = np.dot(W.T, dZ)
 
         assert (dA_prev.shape == A_prev.shape)
@@ -257,6 +257,7 @@ class Base_Neural_Network:
         dA_prev, dW, db = self.__derivation(dZ, layer_index)
         return dA_prev, dW, db
 
+    # todo: rewrite back prop to use layers activation functions, that were set during init
     def backward_propagation(self, Y):
         """
         Backward propagation step for the [LINEAR->RELU] * (L-1) -> LINEAR -> SIGMOID group
@@ -271,7 +272,6 @@ class Base_Neural_Network:
         A = self._activation_cache[iters]
         Y = Y.reshape(A.shape)
 
-        # calculate output layer's(sigmoid) activation f-n derivative
         dA = -Y / A + (1 - Y) / (1 - A)
 
         act_type = Actvitaion_Function.SIGMOID

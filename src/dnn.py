@@ -11,15 +11,15 @@ from regularization_techniques import Regularization
 # todo: this -> add auto-doc to class methods and constructor
 class Deep_Neural_Network(Base_Neural_Network):
 
-    def __init__(self, layers_dims, mini_batch_size=64, optimization=Optimization_Type.Adam,
+    def __init__(self, layers_dims, layers_activations, mini_batch_size=64, optimizer=Optimization_Type.Adam,
                  regularization_type=Regularization.not_required, keep_probabilities=None,
                  initialization_type=Initialization_Type.He, factor=0.075):
         # init DNN weights and biases
-        super(Deep_Neural_Network, self).__init__(layers_dims, initialization_type, factor)
+        super(Deep_Neural_Network, self).__init__(layers_dims, layers_activations, initialization_type, factor)
         self._regularization = regularization_type
         self._drop_out_mask = {}
         self._mini_batch_size = mini_batch_size
-        self._optimization_type = optimization
+        self._optimizer = optimizer
 
         if regularization_type == Regularization.droput:
             if keep_probabilities is not None:
@@ -102,28 +102,26 @@ class Deep_Neural_Network(Base_Neural_Network):
         return mini_batches
 
     def forward_propagation(self, X):
-        if self._regularization == Regularization.droput:
-            self._features = X
-            A = X
+        self._features = X
+        A = X
 
-            for l in range(1, self._depth):
-                A_previous = A
-                A, Z = super(Deep_Neural_Network, self).activation(A_previous, l, Actvitaion_Function.ReLU)
-                self._linear_cache.append(Z)
-                D = self.__forward_drop_out(A, l - 1)
+        for l in range(1, self._depth):
+            A_previous = A
+            A, Z = super(Deep_Neural_Network, self).activation(A_previous, l, self._layers_activations[l])
+            self._linear_cache.append(Z)
+            if self._regularization == Regularization.droput:
+                D = self.__drop_out(A, l - 1)
                 A = np.multiply(A, D)
                 A /= self._keep_probabilities[l - 1]
-                self._activation_cache.append(A)
                 self._drop_out_mask['D' + str(l)] = D
-                # kept neurons after using drop out
-            net_output, Z = self.activation(A, self._depth, Actvitaion_Function.SIGMOID)
-            self._activation_cache.append(net_output, Z)
-            assert (net_output.shape == (1, X.shape[1]))
-            return net_output
-        else:
-            return super(Deep_Neural_Network, self).forward_propagation(X)
+            self._activation_cache.append(A)
+            # kept neurons after using drop out
+        net_output, Z = self.activation(A, self._depth, self._layers_activations[self._depth])
+        self._activation_cache.append(net_output, Z)
+        assert (net_output.shape == (1, X.shape[1]))
+        return net_output
 
-    def __forward_drop_out(self, current_activation, activation_index):
+    def __drop_out(self, current_activation, activation_index):
         droped_out = np.random.randn(current_activation.shape[0], current_activation.shape[1])
         droped_out = droped_out < self._keep_probabilities[activation_index]
         return droped_out
@@ -169,6 +167,7 @@ class Deep_Neural_Network(Base_Neural_Network):
 
         return grads
 
+    # todo: rewrite back prop to use layers activation functions, that were set during init
     def __backward_drop_out(self, Y):
         m = self._features.shape[1]
         grads = {}
