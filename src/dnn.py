@@ -110,10 +110,7 @@ class Deep_Neural_Network(Base_Neural_Network):
             A, Z = super(Deep_Neural_Network, self).activation(A_previous, l, self._layers_activations[l])
             self._linear_cache.append(Z)
             if self._regularization == Regularization.droput:
-                D = self.__drop_out(A, l - 1)
-                A = np.multiply(A, D)
-                A /= self._keep_probabilities[l - 1]
-                self._drop_out_mask['D' + str(l)] = D
+                A = self._drop_out(A, l - 1)
             self._activation_cache.append(A)
             # kept neurons after using drop out
         net_output, Z = self.activation(A, self._depth, self._layers_activations[self._depth])
@@ -124,7 +121,10 @@ class Deep_Neural_Network(Base_Neural_Network):
     def __drop_out(self, current_activation, activation_index):
         droped_out = np.random.randn(current_activation.shape[0], current_activation.shape[1])
         droped_out = droped_out < self._keep_probabilities[activation_index]
-        return droped_out
+        current_activation = np.multiply(current_activation, droped_out)
+        current_activation /= self._keep_probabilities[activation_index]
+        self._drop_out_mask['D' + str(activation_index + 1)] = droped_out
+        return current_activation
 
     def compute_cost(self, net_output, Y, lambd=0.5):
         if self._regularization == Regularization.L1:
