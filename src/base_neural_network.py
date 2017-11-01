@@ -2,7 +2,6 @@ import numpy as np
 from dnn_types import Actvitaion_Function
 from dnn_types import Initialization_Type
 
-# todo: add layers activation functions to be set during net init
 class Base_Neural_Network:
 
     def __init__(self, layers_dims, layers_activations, init_type=Initialization_Type.random, factor=0.001):
@@ -156,7 +155,7 @@ class Base_Neural_Network:
 
     def __derivation(self, dZ, layer_index):
         """
-        Linear portion for a backward propagation step
+        Computes weights, biases and previous activations gradients
 
         :param dZ: -- Gradient of the cost with respect to the linear output (of current layer l)
         :param activation_cache: -- list of cached activation value for each layer with L-1 indexing
@@ -191,7 +190,7 @@ class Base_Neural_Network:
         :returns
             dZ: -- gradient of the cost with respect to Z
         """
-        s = 1 / (1 + np.exp(-Z))
+        s = self.sigmoid(Z)
         dZ = dA * s * (1 - s)
         return dZ
 
@@ -230,7 +229,11 @@ class Base_Neural_Network:
         dZ[Z <= 0] *= 0.001
         return dZ
 
-    def _gradient_descent(self, dA, layer_index, activation_type):
+    def _loss_gradient(self, A, Y):
+        loss_grad = -Y / A + (1 - Y) / (1 - A)
+        return loss_grad
+
+    def _compute_gradients(self, dA, layer_index, activation_type):
         """
         Gradient descent step for a backward propagation step
 
@@ -257,7 +260,6 @@ class Base_Neural_Network:
         dA_prev, dW, db = self.__derivation(dZ, layer_index)
         return dA_prev, dW, db
 
-    # todo: rewrite back prop to use layers activation functions, that were set during init
     def backward_propagation(self, Y):
         """
         Backward propagation step for the [LINEAR->RELU] * (L-1) -> LINEAR -> SIGMOID group
@@ -272,25 +274,28 @@ class Base_Neural_Network:
         A = self._activation_cache[iters]
         Y = Y.reshape(A.shape)
 
-        dA = -Y / A + (1 - Y) / (1 - A)
+        # cross-entropy loss derivative
+        dA = self._loss_gradient(A, Y)
 
-        act_type = Actvitaion_Function.SIGMOID
-        grads['dA' + str(l)], grads['dW' + str(l)], grads['db' + str(l)] = self._gradient_descent(dA, l, act_type)
+        act_type = self._layers_activations[self._depth]
+        grads['dA' + str(l)], grads['dW' + str(l)], grads['db' + str(l)] = self._compute_gradients(dA, l, act_type)
         dA_prev = grads['dA' + str(l)]
 
-        for l in reversed(range(iters)):
-            layer = l + 1
-            dA_prev_tmp, dW_tmp, db_tmp = self._gradient_descent(dA_prev,
-                                                                 layer,
-                                                                 activation_type=Actvitaion_Function.ReLU)
-            grads['dA' + str(layer)], grads['dW' + str(layer)], grads['db' + str(layer)] = dA_prev_tmp, dW_tmp, db_tmp
-            dA_prev = dA_prev_tmp
+        # check whether using base model or a derivative one
+        if self.__class__.__name__ == 'Base_Neural_Network':
+            for l in reversed(range(iters)):
+                layer = l + 1
+                dA_prev_tmp, dW_tmp, db_tmp = self._compute_gradients(dA_prev,
+                                                                        layer,
+                                                                        self._layers_activations[l])
+                grads['dA' + str(layer)], grads['dW' + str(layer)], grads['db' + str(layer)] = dA_prev_tmp, dW_tmp, db_tmp
+                dA_prev = dA_prev_tmp
 
-        self._activation_cache.clear()
-        self._linear_cache.clear()
+            self._activation_cache.clear()
+            self._linear_cache.clear()
         return grads
 
-    def update_parameters_with_momentum(self, grads, learning_rate):
+    def update_parameters(self, grads, learning_rate):
         """
         Update parameters using gradient descent
 

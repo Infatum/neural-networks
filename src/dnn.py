@@ -156,6 +156,8 @@ class Deep_Neural_Network(Base_Neural_Network):
 
     def backward_propagation(self, Y, lambd=0.1):
         grads = None
+
+        # todo: call base class back prop to init grads and compute output layer gradient and the rest of logic within regularizations and optimizations
         if self._regularization == Regularization.L2:
             grads = self.__back_prop_with_regularization(Y, lambd)
         elif self._regularization == Regularization.L1:
