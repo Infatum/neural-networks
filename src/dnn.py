@@ -11,11 +11,13 @@ from regularization_techniques import Regularization
 # todo: this -> add auto-doc to class methods and constructor
 class Deep_Neural_Network(Base_Neural_Network):
 
-    def __init__(self, layers_dims, layers_activations, mini_batch_size=64, optimizer=Optimization_Type.Adam,
+    def __init__(self, layers_dims, layers_activations, mini_batch_size=64, batch_norm=True,
+                 optimizer=Optimization_Type.Adam,
                  regularization_type=Regularization.not_required, keep_probabilities=None,
                  initialization_type=Initialization_Type.He, factor=0.075):
         # init DNN weights and biases
         super(Deep_Neural_Network, self).__init__(layers_dims, layers_activations, initialization_type, factor)
+        self._batch_norm = batch_norm
         self._regularization = regularization_type
         self._drop_out_mask = {}
         self._mini_batch_size = mini_batch_size
@@ -101,7 +103,8 @@ class Deep_Neural_Network(Base_Neural_Network):
             mini_batches.append(mini_batch)
         return mini_batches
 
-    def forward_propagation(self, X):
+    # todo: add batch norm functionality
+    def forward_propagation(self, X, gamma, beta):
         self._features = X
         A = X
 
@@ -155,57 +158,42 @@ class Deep_Neural_Network(Base_Neural_Network):
         return cost
 
     def backward_propagation(self, Y, lambd=0.1):
-        grads = None
-
         # todo: call base class back prop to init grads and compute output layer gradient and the rest of logic within regularizations and optimizations
-        if self._regularization == Regularization.L2:
-            grads = self.__back_prop_with_regularization(Y, lambd)
-        elif self._regularization == Regularization.L1:
-            raise NotImplemented('Not implemented yet')
-        elif self._regularization == Regularization.droput:
-            grads = self.__backward_drop_out()
-        else:
-            grads = super(Deep_Neural_Network, self).backward_propagation(Y)
+        grads = super(Deep_Neural_Network, self).backward_propagation(Y)
+        m = self._features[1]
+        adam, momentum, v, s = False, False, None, None
+        if self._optimizer == Optimization_Type.Adam:
+            adam = True
+            v = self.__initialize_velocity()
+        elif self._optimizer == Optimization_Type.Momentum:
+            momentum = True
+            v, s = self.__initialize_adam()
+
+        if self.__class__.__name__ == 'Deep_Neural_Network':
+            dA_prev = grads['dA' + str(self._depth)]
+            for l in reversed(range(self._depth - 1)):
+                layer = l + 1
+                W, b = self._parameters['W' + str(layer)], self._parameters['b' + str(layer)]
+                dA, dW, db = super(Deep_Neural_Network, self)._compute_gradients(dA_prev, layer,
+                                                                                      self._layers_activations[l])
+                if self._regularization == Regularization.L2:
+                    # L2 Regularization back prop part
+                    # todo: should I shift this to the separate function? (logic separation)
+                    dW += np.dot(lambd / m, W)
+                elif self._regularization == Regularization.droput:
+                    # dropout backprop part
+                    # todo: should I shift this to the separate function? (logic separation)
+                    dA = np.multiply(dA, self._drop_out_mask['D' + str(layer)])
+                    dA /= self._keep_probabilities[l]
+                elif self._regularization == Regularization.not_required:
+                    pass
+                else:
+                    raise NotImplementedError('Other types of regularization aren''t implemented yet')
+                dA_prev = dA
 
         return grads
 
-    # todo: rewrite back prop to use layers activation functions, that were set during init
-    def __backward_drop_out(self, Y):
-        m = self._features.shape[1]
-        grads = {}
-        dZ = self._activation_cache[self._depth - 1] - Y
-        A_prev = self._activation_cache[self._depth - 2]
-        grads['dW' + str(self._depth)] = 1./m * np.dot(dZ, A_prev.T)
-        grads['db' + str(self._depth)] = 1./m * np.sum(dZ, axis=1, keepdims=True)
-        W, b = self._parameters['W' + str(self._depth)], self._parameters['b' + str(self._depth)]
-
-        for l in reversed(range(self._depth - 1)):
-            A = self._activation_cache[l - 1]
-            dA = np.multiply(W.T, dZ)
-            dA = np.multiply(dA, self._drop_out_mask['D' + str(l)])
-            dA /= self._keep_probabilities[l - 1]
-            dZ = np.multiply(dA, np.int64(A > 0))
-
-        return grads
-
-    # todo: rewrite to a single call instead of loop
-    def __back_prop_with_regularization(self, Y, lamdb):
-        iters, m = self._depth - 1, self._features.shape[1]
-        A = self._activation_cache[self._depth - 1]
-        dZ = A - Y
-        grads = {}
-
-        for l in reversed(range(iters)):
-            A_prev, A = self._activation_cache[l - 1], self._activation_cache[l]
-            W, b = self._parameters['W' + str(l)], self._parameters['b' + str(l)]
-            grads['dW' + str(l)] = 1./m * np.dot(dZ, A_prev.T) + np.dot(lamdb / m, W)
-            grads['db' + str(l)] = 1./m * np.sum(dZ, axis=1, keepdims=True)
-            dA = np.dot(W, dZ)
-            dZ = np.multiply(dA, np.int64(A > 0))
-
-        return grads
-
-    def __init_velocity(self):
+    def __initialize_velocity(self):
         v = {}
 
         for l in range(self._depth):
@@ -241,6 +229,10 @@ class Deep_Neural_Network(Base_Neural_Network):
             s['dW' + str(l)] = np.zeros(self._parameters['W'].shape)
             s['db' + str(l)] = np.zeros(self._parameters['b'].shape)
         return v, s
+
+    # todo: update parameters with respect to regularization and optimization
+    def update_parameters(self, grads, learning_rate, lambd=0.01):
+        return
 
     def _update_parameters_with_adam(self, grads, layer, learning_rate, v, s, t, beta1 = 0.9,
                                      beta2=0.999, epsilon = 1e-8):

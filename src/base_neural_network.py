@@ -279,17 +279,15 @@ class Base_Neural_Network:
 
         act_type = self._layers_activations[self._depth]
         grads['dA' + str(l)], grads['dW' + str(l)], grads['db' + str(l)] = self._compute_gradients(dA, l, act_type)
-        dA_prev = grads['dA' + str(l)]
 
         # check whether using base model or a derivative one
         if self.__class__.__name__ == 'Base_Neural_Network':
+            dA_prev = grads['dA' + str(l)]
             for l in reversed(range(iters)):
                 layer = l + 1
-                dA_prev_tmp, dW_tmp, db_tmp = self._compute_gradients(dA_prev,
-                                                                        layer,
-                                                                        self._layers_activations[l])
-                grads['dA' + str(layer)], grads['dW' + str(layer)], grads['db' + str(layer)] = dA_prev_tmp, dW_tmp, db_tmp
-                dA_prev = dA_prev_tmp
+                dA, dW, db = self._compute_gradients(dA_prev, layer, self._layers_activations[l])
+                grads['dA' + str(layer)], grads['dW' + str(layer)], grads['db' + str(layer)] = dA, dW, db
+                dA_prev = dA
 
             self._activation_cache.clear()
             self._linear_cache.clear()
