@@ -6,6 +6,7 @@ class Actvitaion_Function(Enum):
     ReLU = 2
     TANH = 3
     LReLU = 4
+    SOFTMAX = 5
 
 
 class Initialization_Type(Enum):

@@ -158,7 +158,6 @@ class Deep_Neural_Network(Base_Neural_Network):
         return cost
 
     def backward_propagation(self, Y, lambd=0.1):
-        # todo: call base class back prop to init grads and compute output layer gradient and the rest of logic within regularizations and optimizations
         grads = super(Deep_Neural_Network, self).backward_propagation(Y)
         m = self._features[1]
         adam, momentum, v, s = False, False, None, None

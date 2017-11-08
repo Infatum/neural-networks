@@ -27,7 +27,6 @@ class Base_Neural_Network:
         else:
             self._nn_mode = NN_Mode.Regression
 
-
         L = len(layers_dims)
         self._depth = L - 1
         if init_type == Initialization_Type.random:
@@ -35,6 +34,14 @@ class Base_Neural_Network:
 
 
     def _initialize_network(self, layers_dims, layers_activation_functions, factor):
+        """
+        Random init of a Neural Networks weights and init with zeros for biases
+
+        :param layers_dims: -- layers dimensions description (amount of hidden units)
+        :param layers_activation_functions: -- layers activation function descrpition
+        :param factor:
+        :return:
+        """
         print('Base Neural Network init')
         for l in range(1, self._depth + 1):
             self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) * factor
@@ -148,6 +155,19 @@ class Base_Neural_Network:
         assert (net_output.shape == (1, X.shape[1]))
         return net_output
 
+    def compute_loss(self, net_output, Y):
+        out_activ = self._layers_activations[self._depth]
+        loss = None
+        if out_activ == Actvitaion_Function.SIGMOID and self._nn_mode is NN_Mode.Binary_Classification:
+            # cross-entropy loss for the binary classification problem
+            loss = -np.dot(Y, np.log(net_output).T) - np.dot(1 - Y, np.log(1 - net_output).T)
+        elif out_activ == Actvitaion_Function.SOFTMAX and self._nn_mode is NN_Mode.Multiclass_Classification:
+            # cross-entropy loss for the multiclass classification problem
+            loss = np.sum(np.dot(Y, np.log(net_output).T))
+        else:
+            raise NotImplementedError('Not implemented yet')
+        return loss
+
     def compute_cost(self, net_output, Y):
         """
         Computes the cost over all training set
@@ -158,7 +178,7 @@ class Base_Neural_Network:
         """
         # m = amount of training examples
         m = Y.shape[1]
-        cost = (1. / m) * (-np.dot(Y, np.log(net_output).T) - np.dot(1 - Y, np.log(1 - net_output).T))
+        cost = (1. / m) * self.compute_loss(net_output, Y)
         cost = np.squeeze(cost)
 
         return cost
@@ -240,7 +260,16 @@ class Base_Neural_Network:
         return dZ
 
     def _loss_gradient(self, A, Y):
-        loss_grad = -Y / A + (1 - Y) / (1 - A)
+        out_activ = self._layers_activations[self._depth]
+        loss_grad = None
+        if out_activ == Actvitaion_Function.SIGMOID and self._nn_mode is NN_Mode.Binary_Classification:
+            # cross-entropy loss gradient
+            loss_grad = -Y / A + (1 - Y) / (1 - A)
+        elif out_activ == Actvitaion_Function.SOFTMAX and self._nn_mode is NN_Mode.Multiclass_Classification:
+            # softmax cross-entropy loss gradient
+            #loss_grad = -
+            # todo: add all loss gradients with respect to output layer's activation function
+
         return loss_grad
 
     def _compute_gradients(self, dA, layer_index, activation_type):
