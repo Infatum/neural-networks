@@ -1,10 +1,11 @@
 import numpy as np
 from dnn_types import Actvitaion_Function
 from dnn_types import Initialization_Type
+from dnn_types import NN_Mode
 
 class Base_Neural_Network:
 
-    def __init__(self, layers_dims, layers_activations, init_type=Initialization_Type.random, factor=0.001):
+    def __init__(self, layers_dims, layers_activations, mode, init_type=Initialization_Type.random, factor=0.001):
         """
         Initialize the N-Layer Neural Net structure
 
@@ -19,10 +20,19 @@ class Base_Neural_Network:
         self._features = None
         self._layers_activations = {}
 
+        if mode == NN_Mode.Binary_Classification:
+            self._nn_mode = NN_Mode.Binary_Classification
+        elif mode == NN_Mode.Multiclass_Classification:
+            self._nn_mode = NN_Mode.Multiclass_Classification
+        else:
+            self._nn_mode = NN_Mode.Regression
+
+
         L = len(layers_dims)
         self._depth = L - 1
         if init_type == Initialization_Type.random:
             self._initialize_network(layers_dims, layers_activations, factor)
+
 
     def _initialize_network(self, layers_dims, layers_activation_functions, factor):
         print('Base Neural Network init')

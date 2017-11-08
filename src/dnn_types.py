@@ -31,3 +31,9 @@ class Optimization_Type(Enum):
     Momentum = 2
     RMSProp = 3
     Adam = 4
+
+
+class NN_Mode(Enum):
+    Binary_Classification = 1
+    Multiclass_Classification = 2
+    Regression = 3

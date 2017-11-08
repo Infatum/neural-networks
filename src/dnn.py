@@ -11,12 +11,12 @@ from regularization_techniques import Regularization
 # todo: this -> add auto-doc to class methods and constructor
 class Deep_Neural_Network(Base_Neural_Network):
 
-    def __init__(self, layers_dims, layers_activations, mini_batch_size=64, batch_norm=True,
+    def __init__(self, layers_dims, layers_activations, mode, mini_batch_size=64, batch_norm=True,
                  optimizer=Optimization_Type.Adam,
                  regularization_type=Regularization.not_required, keep_probabilities=None,
                  initialization_type=Initialization_Type.He, factor=0.075):
         # init DNN weights and biases
-        super(Deep_Neural_Network, self).__init__(layers_dims, layers_activations, initialization_type, factor)
+        super(Deep_Neural_Network, self).__init__(layers_dims, layers_activations, mode, initialization_type, factor)
         self._batch_norm = batch_norm
         self._regularization = regularization_type
         self._drop_out_mask = {}
@@ -234,7 +234,7 @@ class Deep_Neural_Network(Base_Neural_Network):
     def update_parameters(self, grads, learning_rate, lambd=0.01):
         return
 
-    def _update_parameters_with_adam(self, grads, layer, learning_rate, v, s, t, beta1 = 0.9,
+    def _update_parameters_with_adam(self, grads, layer, learning_rate, v, s, t, beta1=0.9,
                                      beta2=0.999, epsilon = 1e-8):
         v_dW, v_db = v
         s_dW, s_db = s
