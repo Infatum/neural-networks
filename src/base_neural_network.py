@@ -164,6 +164,8 @@ class Base_Neural_Network:
         elif out_activ == Actvitaion_Function.SOFTMAX and self._nn_mode is NN_Mode.Multiclass_Classification:
             # cross-entropy loss for the multiclass classification problem
             loss = np.sum(np.dot(Y, np.log(net_output).T))
+        elif out_activ == Actvitaion_Function.LINEAR_REGRESSION and self._nn_mode.Regression:
+            loss = np.sum(np.square(np.dot(net_output.T, self._features) - Y))
         else:
             raise NotImplementedError('Not implemented yet')
         return loss
@@ -178,7 +180,10 @@ class Base_Neural_Network:
         """
         # m = amount of training examples
         m = Y.shape[1]
-        cost = (1. / m) * self.compute_loss(net_output, Y)
+        if self._nn_mode.Regression:
+            cost = (1. / (2 * m)) * self.compute_loss(net_output, Y)
+        else:
+            cost = (1. / m) * self.compute_loss(net_output, Y)
         cost = np.squeeze(cost)
 
         return cost
@@ -267,9 +272,9 @@ class Base_Neural_Network:
             loss_grad = -Y / A + (1 - Y) / (1 - A)
         elif out_activ == Actvitaion_Function.SOFTMAX and self._nn_mode is NN_Mode.Multiclass_Classification:
             # softmax cross-entropy loss gradient
-            #loss_grad = -
-            # todo: add all loss gradients with respect to output layer's activation function
-
+            loss_grad = A - Y
+        else:
+            raise NotImplementedError('Haven''t implemented yet')
         return loss_grad
 
     def _compute_gradients(self, dA, layer_index, activation_type):
@@ -339,7 +344,6 @@ class Base_Neural_Network:
         :param grads: -- gradients
         :param learning_rate: -- size of a gradient descent step
         """
-        # Update rule for each parameter. Use a for loop.
         for l in range(1, self._depth + 1):
             W, b, dW, db = self._parameters['W' + str(l)], self._parameters['b' + str(l)], grads['dW' + str(l)], grads[
                 'db' + str(l)]
@@ -359,7 +363,6 @@ class Base_Neural_Network:
         m = test_set.shape[1]
         predictions = np.zeros((1, m))
 
-        # Forward propagation
         dnn_outputs = self.forward_propagation(test_set)
 
         for i in range(0, dnn_outputs.shape[1]):

@@ -7,6 +7,8 @@ class Actvitaion_Function(Enum):
     TANH = 3
     LReLU = 4
     SOFTMAX = 5
+    LINEAR_REGRESSION = 6
+    POLINOMIAL_REGRESSION = 7
 
 
 class Initialization_Type(Enum):
