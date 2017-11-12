@@ -347,12 +347,6 @@ class Base_Neural_Network:
                     'db' + str(l)]
                 self._parameters['W' + str(l)] = W - learning_rate * dW
                 self._parameters['b' + str(l)] = b - learning_rate * db
-        elif self._nn_mode is NN_Mode.Regression:
-            for l in range(1, self._depth + 1):
-                W, b, dW, db = self._parameters['W' + str(l)], self._parameters['b' + str(l)], grads['dW' + str(l)], grads[
-                                   'db' + str(l)]
-                self._parameters['W' + str(l)] = W - learning_rate *
-                self._parameters['b' + str(l)] = b - learning_rate * db
 
 
     def predict(self, test_set, labels):
