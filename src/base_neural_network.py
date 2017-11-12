@@ -165,7 +165,7 @@ class Base_Neural_Network:
             # cross-entropy loss for the multiclass classification problem
             loss = np.sum(np.dot(Y, np.log(net_output).T))
         elif out_activ == Actvitaion_Function.LINEAR_REGRESSION and self._nn_mode.Regression:
-            loss = np.sum(np.square(np.dot(net_output.T, self._features) - Y))
+            loss = np.sum(np.square(Y - net_output))
         else:
             raise NotImplementedError('Not implemented yet')
         return loss
@@ -180,10 +180,7 @@ class Base_Neural_Network:
         """
         # m = amount of training examples
         m = Y.shape[1]
-        if self._nn_mode.Regression:
-            cost = (1. / (2 * m)) * self.compute_loss(net_output, Y)
-        else:
-            cost = (1. / m) * self.compute_loss(net_output, Y)
+        cost = (1. / m) * self.compute_loss(net_output, Y)
         cost = np.squeeze(cost)
 
         return cost
@@ -274,7 +271,7 @@ class Base_Neural_Network:
             # softmax cross-entropy loss gradient
             loss_grad = A - Y
         else:
-            raise NotImplementedError('Haven''t implemented yet')
+            loss_grad = np.dot(np.sum(A - Y), self._features)
         return loss_grad
 
     def _compute_gradients(self, dA, layer_index, activation_type):
@@ -344,11 +341,19 @@ class Base_Neural_Network:
         :param grads: -- gradients
         :param learning_rate: -- size of a gradient descent step
         """
-        for l in range(1, self._depth + 1):
-            W, b, dW, db = self._parameters['W' + str(l)], self._parameters['b' + str(l)], grads['dW' + str(l)], grads[
-                'db' + str(l)]
-            self._parameters['W' + str(l)] = W - learning_rate * dW
-            self._parameters['b' + str(l)] = b - learning_rate * db
+        if self._nn_mode is NN_Mode.Binary_Classification or self._nn_mode is NN_Mode.Multiclass_Classification:
+            for l in range(1, self._depth + 1):
+                W, b, dW, db = self._parameters['W' + str(l)], self._parameters['b' + str(l)], grads['dW' + str(l)], grads[
+                    'db' + str(l)]
+                self._parameters['W' + str(l)] = W - learning_rate * dW
+                self._parameters['b' + str(l)] = b - learning_rate * db
+        elif self._nn_mode is NN_Mode.Regression:
+            for l in range(1, self._depth + 1):
+                W, b, dW, db = self._parameters['W' + str(l)], self._parameters['b' + str(l)], grads['dW' + str(l)], grads[
+                                   'db' + str(l)]
+                self._parameters['W' + str(l)] = W - learning_rate *
+                self._parameters['b' + str(l)] = b - learning_rate * db
+
 
     def predict(self, test_set, labels):
         """
