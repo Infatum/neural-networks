@@ -180,7 +180,10 @@ class Base_Neural_Network:
         """
         # m = amount of training examples
         m = Y.shape[1]
-        cost = (1. / m) * self.compute_loss(net_output, Y)
+        if self._nn_mode is NN_Mode.Regression:
+            cost = (1. / (2*m)) * self.compute_loss(net_output, Y)
+        else:
+            cost = (1. / m) * self.compute_loss(net_output, Y)
         cost = np.squeeze(cost)
 
         return cost
