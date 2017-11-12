@@ -126,6 +126,8 @@ class Base_Neural_Network:
             A = self.LRelU(Z)
         elif activation_type == Actvitaion_Function.TANH:
             A = self.tanh(Z)
+        elif activation_type == Actvitaion_Function.LINEAR_REGRESSION:
+            raise ValueError('Linear regression doesn''t have a non-linear activation part')
         else:
             raise ValueError('Provide a valid activation function type: either ReLU, LReLU, sigmoid or tanh')
         return A, Z
@@ -144,12 +146,18 @@ class Base_Neural_Network:
 
         for l in range(1, self._depth):
             A_prev = A
-            A, Z = self.activation(A_prev, l, self._layers_activations[l])
-            self._activation_cache.append(A)
+            if self._layers_activations != Actvitaion_Function.LINEAR_REGRESSION:
+                A, Z = self.activation(A_prev, l, self._layers_activations[l])
+                self._activation_cache.append(A)
+            else:
+                Z = self.__linear_forward(A, l)
             self._linear_cache.append(Z)
 
-        net_output, Z = self.activation(A, self._depth, self._layers_activations[self._depth])
-        self._activation_cache.append(net_output)
+        if self._layers_activations[self._depth] == Actvitaion_Function.LINEAR_REGRESSION:
+            net_output = Z
+        else:
+            net_output, Z = self.activation(A, self._depth, self._layers_activations[self._depth])
+            self._activation_cache.append(net_output)
         self._linear_cache.append(Z)
 
         assert (net_output.shape == (1, X.shape[1]))
@@ -299,6 +307,8 @@ class Base_Neural_Network:
             dZ = self.__tanh_gradient(dA, linear)
         elif activation_type == Actvitaion_Function.LReLU:
             dZ = self.__LReLU_gradient(dA, linear)
+        elif activation_type == Actvitaion_Function.LINEAR_REGRESSION:
+            dZ = 1
         else:
             raise ValueError('Provide a valid activation function type: either ReLU, LReLU, sigmoid or tanh')
         dA_prev, dW, db = self.__derivation(dZ, layer_index)
