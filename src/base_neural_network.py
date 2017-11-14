@@ -62,7 +62,7 @@ class Base_Neural_Network:
         # todo: return an immutable data structure to avoid changes of the dnn parameters
         return self._parameters
 
-    def __linear_forward(self, A, current_layer_index):
+    def _linear_forward(self, A, current_layer_index):
         """
         Linear part of a layer's forward propagation
 
@@ -117,7 +117,7 @@ class Base_Neural_Network:
             A: -- post-activation value
             Z: -- linear cache(linear function value)
         """
-        Z = self.__linear_forward(previous_activation, layer_indx)
+        Z = self._linear_forward(previous_activation, layer_indx)
         if activation_type == Actvitaion_Function.SIGMOID:
             A = self.sigmoid(Z)
         elif activation_type == Actvitaion_Function.ReLU:
@@ -150,7 +150,7 @@ class Base_Neural_Network:
                 A, Z = self.activation(A_prev, l, self._layers_activations[l])
                 self._activation_cache.append(A)
             else:
-                Z = self.__linear_forward(A, l)
+                Z = self._linear_forward(A, l)
             self._linear_cache.append(Z)
 
         if self._layers_activations[self._depth] == Actvitaion_Function.LINEAR_REGRESSION:

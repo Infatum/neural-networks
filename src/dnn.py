@@ -9,6 +9,7 @@ from regularization_techniques import Regularization
 
 
 # todo: this -> add auto-doc to class methods and constructor
+# todo: add batch normalization
 class Deep_Neural_Network(Base_Neural_Network):
 
     def __init__(self, layers_dims, layers_activations, mode, mini_batch_size=64, batch_norm=True,
@@ -28,8 +29,8 @@ class Deep_Neural_Network(Base_Neural_Network):
                 try:
                     assert (len(keep_probabilities) == self._depth - 1)
                 except AssertionError:
-                    raise ValueError('Length of the drop_out list should be applied only to hidden layers, '
-                                     'output layer should be unchanged')
+                    raise ValueError('Drop out list should be applied only to hidden layers, and'
+                                     ' have the dimension of layers_quantity - 1, the output layer should be unchanged')
                 self._keep_probabilities = keep_probabilities
             else:
                 raise ValueError('Provide a list with probability of drop_out for each layer with length DNN.depth - 1')
@@ -38,50 +39,43 @@ class Deep_Neural_Network(Base_Neural_Network):
         print('Deep Neural Network init')
         if init_type == Initialization_Type.random:
             super(Deep_Neural_Network, self)._initialize_network(layers_dims, factor)
-        elif init_type == Initialization_Type.He:
-            self.__he_init(layers_dims)
-        elif init_type == Initialization_Type.ReLU:
-            self.__ReLU_init(layers_dims)
-        elif init_type == Initialization_Type.Xavier:
-            self.__xavier_init(layers_dims)
         else:
-            raise NotImplemented('Other init types haven'' been implemented')
+            for l in range(1, self._depth + 1):
+                if self._batch_norm:
+                    self._init_batch_norm(l, layers_dims[l], layers_dims[l - 1])
+                if init_type ==  Initialization_Type.He:
+                    self.__he_init(l, layers_dims[l], layers_dims[l - 1])
+                elif init_type == Initialization_Type.Xavier:
+                    self.__xavier_init(l, layers_dims[l], layers_dims[l - 1])
+                elif init_type == Initialization_Type.ReLU:
+                    self.__ReLU_init(l, layers_dims[l], layers_dims[l - 1])
+                else:
+                    raise NotImplementedError('Haven''t implemented yet')
 
-    def __xavier_init(self, layers_dims):
+    def _init_batch_norm(self, layer, current_dim, previous_dim):
+        self._parameters['Gamma' + str(layer)] = np.ones((current_dim, previous_dim))
+        self._parameters['Beta' + str(layer)] = np.zeros((current_dim, previous_dim))
+
+    def __xavier_init(self, layer, current_dim, previous_dim):
         """
         initialize weights with improved Xavier initialization for each hidden layer and biases with zeros
 
         :param layers_dims: -- dimensions structure of the layers for DNN
         """
-        if layers_dims is not None:
-            for l in range(1, self._depth + 1):
-                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) / np.sqrt(
-                    layers_dims[l - 1])
-                self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
-        else:
-            raise ReferenceError('Provide a list of DNN structure, '
-                                 'where each element should describe amount of neurons and it''s index - layer index')
+        l = layer
+        self._parameters['W' + str(l)] = np.random.randn(current_dim, previous_dim) / np.sqrt(previous_dim)
+        self._parameters['b' + str(l)] = np.zeros((current_dim, 1))
 
-    def __ReLU_init(self, layers_dims):
-        if layers_dims is not None:
-            for l in range(1, self._depth + 1):
-                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) * np.sqrt(
-                        2 / (layers_dims[l - 1] + layers_dims[l]))
-                self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
-        else:
-            raise ReferenceError('Provide a list of DNN structure, '
-                                     'where each element should describe amount of neurons and it''s index - layer index')
+    def __ReLU_init(self, layer, current_dim, previous_dim):
+        l = layer
+        self._parameters['W' + str(l)] = np.random.randn(current_dim, previous_dim) * np.sqrt(
+                        2 / (previous_dim + current_dim))
+        self._parameters['b' + str(l)] = np.zeros((current_dim, 1))
 
-    def __he_init(self, layers_dims):
-        np.random.seed(3)
-        if layers_dims is not None:
-            for l in range(1, self._depth + 1):
-                self._parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l - 1]) * np.sqrt(
-                        2 / (layers_dims[l - 1]))
-                self._parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
-        else:
-            raise ReferenceError('Provide a list of DNN structure, '
-                                     'where each element should describe amount of neurons and it''s index - layer index')
+    def __he_init(self, layer, current_dim, previous_dim):
+        l =  layer
+        self._parameters['W' + str(l)] = np.random.randn(current_dim, previous_dim) * np.sqrt(2 / (previous_dim))
+        self._parameters['b' + str(l)] = np.zeros((current_dim, 1))
 
     def _prepare_mini_batches(self, features, labels):
         mini_batches = []
@@ -104,13 +98,17 @@ class Deep_Neural_Network(Base_Neural_Network):
         return mini_batches
 
     # todo: add batch norm functionality
-    def forward_propagation(self, X, gamma, beta):
+    def forward_propagation(self, X, epsilon=0.00001):
+        if self._batch_norm:
+            X = self.normalize_inputs(X)
         self._features = X
         A = X
 
         for l in range(1, self._depth):
             A_previous = A
             A, Z = super(Deep_Neural_Network, self).activation(A_previous, l, self._layers_activations[l])
+            if self._batch_norm:
+                Z = self._forward_prop_with_batch_norm(l, Z, epsilon)
             self._linear_cache.append(Z)
             if self._regularization == Regularization.droput:
                 A = self._drop_out(A, l - 1)
@@ -121,6 +119,11 @@ class Deep_Neural_Network(Base_Neural_Network):
         assert (net_output.shape == (1, X.shape[1]))
         return net_output
 
+    def normalize_inputs(self, X):
+        mean = np.mean(X)
+        variance = (1. / X.size[1]) * np.sum(X ** 2)
+        X /= variance
+        return X
     def __drop_out(self, current_activation, activation_index):
         droped_out = np.random.randn(current_activation.shape[0], current_activation.shape[1])
         droped_out = droped_out < self._keep_probabilities[activation_index]
@@ -128,6 +131,14 @@ class Deep_Neural_Network(Base_Neural_Network):
         current_activation /= self._keep_probabilities[activation_index]
         self._drop_out_mask['D' + str(activation_index + 1)] = droped_out
         return current_activation
+
+    def _forward_prop_with_batch_norm(self, layer, Z, epsilon):
+        m = Z.shape[1]
+        mean = np.mean(Z)
+        varience = (1./ m) * np.sum(np.square(Z - mean))
+        Z_norm = (Z - mean) / np.sqrt(varience + epsilon)
+        Z_tilda = np.dot(self._parameters['Gamma' + str(layer)], Z_norm) + self._parameters['Beta' + str(layer)]
+        return Z_tilda
 
     def compute_cost(self, net_output, Y, lambd=0.5):
         if self._regularization == Regularization.L1:
