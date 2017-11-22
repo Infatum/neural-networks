@@ -1,5 +1,5 @@
 import numpy as np
-import base_neural_network as DNN
+import feed_forward_neural_network as DNN
 
 # todo: this -> Add autodoc
 def gradient_cheking(y, theta, forward_prop, back_prop, epsilon=1e-7):

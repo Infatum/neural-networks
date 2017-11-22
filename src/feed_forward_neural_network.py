@@ -3,7 +3,7 @@ from dnn_types import Actvitaion_Function
 from dnn_types import Initialization_Type
 from dnn_types import NN_Mode
 
-class Base_Neural_Network:
+class Feed_Forward_Neural_Network:
 
     def __init__(self, layers_dims, layers_activations, mode, init_type=Initialization_Type.random, factor=0.001):
         """
@@ -173,6 +173,7 @@ class Base_Neural_Network:
             # cross-entropy loss for the multiclass classification problem
             loss = np.sum(np.dot(Y, np.log(net_output).T))
         elif out_activ == Actvitaion_Function.LINEAR_REGRESSION and self._nn_mode.Regression:
+            # mean-squared error loss for the regression problem
             loss = np.sum(np.square(Y - net_output))
         else:
             raise NotImplementedError('Not implemented yet')

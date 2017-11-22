@@ -1,6 +1,6 @@
 import time
 import data_resolver
-import base_neural_network as DNN
+import feed_forward_neural_network as DNN
 from enum import Enum
 import matplotlib.pyplot as plt
 import numpy as np
@@ -37,7 +37,7 @@ class Binary_Classifier:
         model = None
         if model_type == Model_Type.DNN:
             if layers_dims != 0 and len(layers_dims) > 0:
-                model = DNN.Base_Neural_Network(layers_dims)
+                model = DNN.Feed_Forward_Neural_Network(layers_dims)
             else:
                 raise ValueError('Please, provide a list with layers dimensions')
         else:
@@ -49,7 +49,7 @@ class Binary_Classifier:
             model_output = self._model.forward_propagation(data_manager.train_image_data)
             cost = self._model.compute_cost(model_output, data_manager.train_label_data)
             grads = self._model.backward_propagation(data_manager.train_label_data)
-            self._model.update_parameters_with_momentum(grads, self._learning_rate)
+            self._model.update_parameters(grads, self._learning_rate)
 
             # Print the cost every 100 training example
             if self._print_cost and i % 100 == 0:
