@@ -134,7 +134,7 @@ class Deep_FF_Neural_Network(Feed_Forward_Neural_Network):
         X /= variance
         return X
 
-    def __drop_out(self, current_activation, activation_index):
+    def _drop_out(self, current_activation, activation_index):
         droped_out = np.random.randn(current_activation.shape[0], current_activation.shape[1])
         droped_out = droped_out < self._keep_probabilities[activation_index]
         current_activation = np.multiply(current_activation, droped_out)
@@ -251,14 +251,22 @@ class Deep_FF_Neural_Network(Feed_Forward_Neural_Network):
         return v, s
 
     # todo: update parameters with respect to regularization, optimization and mini-batches
-    def update_parameters(self, labels, learning_rate, lambd=0.01):
+    def update_parameters(self, labels, learning_rate, hparameters, lambd=0.01):
         if self._batch_norm:
             minibatches = self.prepare_mini_batches(self._features, labels)
-            #for minibatch in minibatches:
-
-
-    def _update_params_batch_norm(self, minibatch, grads):
-
+            for minibatch in minibatches:
+                X, Y = minibatch
+                grads = self.backward_propagation(labels, lambd)
+                for l in range(1, self._depth + 1):
+                    if self._optimizer == Optimization_Type.Momentum:
+                        beta = hparameters['beta']
+                        v = self.__initialize_velocity()
+                        self._update_parameters_with_momentum(grads, l, learning_rate, v, beta)
+                    elif self._optimizer == Optimization_Type.Adam:
+                        v, s = self.__initialize_adam()
+                        self._update_parameters_with_adam(grads, l, learning_rate, v, s, X)
+                    else:
+                        raise NotImplementedError('Only Momentum and Adam optimizers are available now')
 
     def _update_parameters_with_adam(self, grads, layer, learning_rate, v, s, t, beta1=0.9,
                                      beta2=0.999, epsilon = 1e-8):
